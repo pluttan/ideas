@@ -1,0 +1,407 @@
+/* Лента идей — один экран, одна идея. Catppuccin Mocha */
+:root {
+  --crust:    #11111b;
+  --mantle:   #181825;
+  --base:     #1e1e2e;
+  --surface0: #313244;
+  --surface1: #45475a;
+  --surface2: #585b70;
+  --overlay0: #6c7086;
+  --overlay1: #7f849c;
+  --subtext0: #a6adc8;
+  --subtext1: #bac2de;
+  --text:     #cdd6f4;
+  --mauve:    #cba6f7;
+  --blue:     #89b4fa;
+  --sapphire: #74c7ec;
+  --teal:     #94e2d5;
+  --green:    #a6e3a1;
+  --yellow:   #f9e2af;
+  --peach:    #fab387;
+  --red:      #f38ba8;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--crust);
+  color: var(--text);
+  font: 16px/1.6 Onest, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* ==========================
+   ===      Верх          ===
+   ========================== */
+
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 26px;
+  background: linear-gradient(180deg, rgba(17,17,27,.9), rgba(17,17,27,0));
+  pointer-events: none;
+}
+
+.bar > * { pointer-events: auto; }
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(205,214,244,.16);
+  background: rgba(17,17,27,.5);
+  backdrop-filter: blur(10px);
+  color: var(--subtext1);
+  font-size: 13.5px;
+  text-decoration: none;
+}
+
+.back:hover { color: var(--text); border-color: rgba(205,214,244,.34); }
+
+.back svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  rx: 1;
+}
+
+.pick {
+  padding: 8px 15px;
+  border-radius: 999px;
+  border: 1px solid rgba(203,166,247,.4);
+  background: rgba(203,166,247,.15);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  max-width: 48vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--subtext0);
+  font-variant-numeric: tabular-nums;
+  background: rgba(17,17,27,.5);
+  backdrop-filter: blur(10px);
+  padding: 7px 12px;
+  border-radius: 999px;
+}
+
+/* ==========================
+   ===       Лента        ===
+   ========================== */
+
+.feed {
+  height: 100dvh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-y: contain;
+}
+
+.feed::-webkit-scrollbar { display: none; }
+
+.slide {
+  position: relative;
+  height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 0 calc(58px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* фон слайда: свой оттенок у каждого раздела */
+.slide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(120% 70% at 18% 8%, var(--tint1), transparent 60%),
+    radial-gradient(110% 75% at 88% 22%, var(--tint2), transparent 62%),
+    var(--base);
+}
+
+.slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(17,17,27,.5) 0%, rgba(17,17,27,.1) 32%, rgba(17,17,27,.86) 78%, rgba(17,17,27,.96) 100%);
+}
+
+.body {
+  width: min(720px, 100% - 44px);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pill {
+  align-self: flex-start;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(205,214,244,.2);
+  background: rgba(17,17,27,.42);
+  font-size: 12.5px;
+  color: var(--subtext1);
+}
+
+.slide h2 {
+  margin: 0;
+  font-family: Unbounded, Onest, sans-serif;
+  font-size: clamp(25px, 5.4vw, 40px);
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.slide p {
+  margin: 0;
+  font-size: clamp(15px, 2.1vw, 17px);
+  line-height: 1.66;
+  color: var(--subtext1);
+  max-width: 62ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.slide.open p { -webkit-line-clamp: unset; }
+
+.more {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--overlay1);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px dashed var(--surface2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.tag {
+  font-size: 12.5px;
+  color: var(--subtext0);
+  background: rgba(49,50,68,.66);
+  border-radius: 8px;
+  padding: 5px 10px;
+}
+
+.go {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 19px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--crust);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: transform .12s;
+}
+
+.go:active { transform: scale(.97); }
+
+/* сложность */
+.gauge {
+  position: absolute;
+  top: calc(84px + env(safe-area-inset-top));
+  right: 22px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.gauge b {
+  font-family: Unbounded, Onest, sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.gauge span {
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--overlay1);
+}
+
+.gauge i {
+  display: block;
+  width: 46px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(205,214,244,.16);
+  overflow: hidden;
+}
+
+.gauge i u {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.g-easy  { color: var(--green); }
+.g-mid   { color: var(--yellow); }
+.g-hard  { color: var(--peach); }
+.g-crazy { color: var(--red); }
+
+.slide video {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: .5;
+}
+
+/* ==========================
+   ===      Шторка        ===
+   ========================== */
+
+.sheet[hidden] { display: none; }   /* иначе display:flex перебивает атрибут hidden */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(17,17,27,.72);
+  backdrop-filter: blur(6px);
+}
+
+.sheet-card {
+  width: min(620px, 100%);
+  max-height: 76dvh;
+  overflow-y: auto;
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--surface0);
+  border-bottom: 0;
+  background: var(--mantle);
+  padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+}
+
+.sheet-title {
+  margin: 0 0 14px;
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--overlay1);
+}
+
+.sheet-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sheet-list button {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--surface0);
+  background: var(--base);
+  color: var(--subtext1);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.sheet-list button:hover { border-color: var(--surface2); color: var(--text); }
+
+.sheet-list button[aria-pressed="true"] {
+  background: rgba(203,166,247,.16);
+  border-color: var(--mauve);
+  color: var(--text);
+}
+
+.sheet-list .num { color: var(--overlay1); margin-left: 6px; font-size: 12px; }
+
+/* ==========================
+   ===     Подсказка      ===
+   ========================== */
+
+.hint {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--overlay1);
+  pointer-events: none;
+  transition: opacity .4s;
+}
+
+.hint.gone { opacity: 0; }
+
+.hint-arrow {
+  width: 9px;
+  height: 9px;
+  border-left: 2px solid var(--overlay1);
+  border-top: 2px solid var(--overlay1);
+  transform: rotate(45deg);
+  animation: nudge 1.7s ease-in-out infinite;
+}
+
+@keyframes nudge {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); }
+  50%      { transform: rotate(45deg) translate(3px, 3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint-arrow { animation: none; }
+}
+
+@media (max-width: 640px) {
+  .body { width: calc(100% - 36px); gap: 12px; }
+  .gauge { right: 16px; }
+  .go { margin-left: 0; }
+}

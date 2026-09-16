@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Лента идей</title>
+<meta name="description" content="Лента самодельных проектов: листай и находи, что собрать своими руками.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/feed.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128161;</text></svg>">
+</head>
+<body>
+
+<header class="bar">
+  <a class="back" href="index.html" title="Открыть сеткой">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Сеткой</span>
+  </a>
+  <button type="button" id="pick" class="pick">Все разделы</button>
+  <span class="pos" id="pos"></span>
+</header>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-card">
+    <p class="sheet-title">Показывать</p>
+    <div class="sheet-list" id="sheet-list"></div>
+  </div>
+</div>
+
+<main class="feed" id="feed"></main>
+
+<div class="hint" id="hint"><span class="hint-arrow" aria-hidden="true"></span>листай вверх</div>
+
+<script src="assets/feed.js"></script>
+</body>
+</html>
