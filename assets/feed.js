@@ -147,6 +147,13 @@ function slide(it, pos) {
     v.playsInline = true;
     v.preload = 'metadata';
     el.append(v);
+  } else if (it.image) {
+    const img = document.createElement('img');
+    img.className = 'poster';
+    img.src = it.image;
+    img.alt = '';
+    img.decoding = 'async';
+    el.append(img);
   } else if (it.yt) {
     el.dataset.yt = it.yt;
     const img = document.createElement('img');

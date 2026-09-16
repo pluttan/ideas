@@ -447,11 +447,18 @@ h1 {
 .d-crazy .diff-num { color: var(--red); }
 .d-crazy .diff-bar i { background: var(--red); }
 
-.card video {
+.card video,
+.card .shot {
   width: 100%;
   border-radius: 10px;
   background: var(--crust);
   display: block;
+}
+
+/* кадр из поста: карточка без ролика иначе выглядит пустой */
+.card .shot {
+  max-height: 260px;
+  object-fit: cover;
 }
 
 mark {

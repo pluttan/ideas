@@ -207,6 +207,14 @@ function card(it) {
     v.preload = 'metadata';   // первый кадр вместо чёрного прямоугольника
     v.playsInline = true;
     el.append(v);
+  } else if (it.image) {
+    const img = document.createElement('img');
+    img.className = 'shot';
+    img.src = it.image;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    el.append(img);
   }
 
   const foot = document.createElement('div');

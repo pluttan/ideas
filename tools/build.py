@@ -4,7 +4,7 @@
     python3.12 tools/build.py
 
 catalog.jsonl — источник каталога, по одной идее на строку:
-поля title, desc, diff, section, tags, link, video. Его можно править руками.
+поля title, desc, diff, section, tags, link, video, image. Его можно править руками.
 """
 import argparse
 import json
@@ -12,7 +12,7 @@ import pathlib
 import re
 import sys
 
-FIELDS = ("title", "desc", "diff", "section", "tags", "link", "video")
+FIELDS = ("title", "desc", "diff", "section", "tags", "link", "video", "image")
 
 # порядок разделов на сайте: от самых массовых тем к нишевым задаётся вручную,
 # чтобы каталог открывался на понятном, а не на случайном разделе
@@ -75,6 +75,7 @@ def clean(raw: list[dict]) -> list[dict]:
             "tags": [t.strip() for t in (it.get("tags") or []) if t.strip()][:3],
             "link": link,
             "video": (it.get("video") or "").strip(),
+            "image": (it.get("image") or "").strip(),   # кадр для идей, у которых нет ни ролика, ни ютуба
             "yt": youtube_id(link),
         })
     return out

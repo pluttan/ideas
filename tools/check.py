@@ -48,6 +48,10 @@ def main() -> None:
         if video and video.startswith("assets/") and not (root / video).exists():
             problems.append(f"#{n}: файла нет — {video}")
 
+        image = it.get("image") or ""
+        if image and not re.match(r"^(https?://\S+\.(jpg|jpeg|png|webp)|assets/img/[\w.\-]+)$", image):
+            problems.append(f"#{n}: image не похоже на путь к картинке — {image[:40]}")
+
     described = sum(1 for it in ideas if it.get("desc"))
     rated = sum(1 for it in ideas if it.get("diff") is not None)
     print(f"идей {len(ideas)}, с описанием {described}, с оценкой {rated}, разделов {len(sections)}")
