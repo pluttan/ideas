@@ -159,10 +159,26 @@ function renderMore() {
   const slice = state.view.slice(state.shown, state.shown + PAGE);
   if (!slice.length) return;
   const frag = document.createDocumentFragment();
-  for (const it of slice) frag.append(card(it));
+  const fresh = [];
+  for (const it of slice) {
+    const el = card(it);
+    fresh.push(el);
+    frag.append(el);
+  }
   grid.append(frag);
   state.shown += slice.length;
+  // обрезку видно только после вставки в документ
+  for (const el of fresh) {
+    const p = el.querySelector('p');
+    if (p && p.scrollHeight > p.clientHeight + 4) el.classList.add('clamped');
+  }
 }
+
+grid.addEventListener('click', e => {
+  if (e.target.closest('a, video')) return;
+  const el = e.target.closest('.card.clamped');
+  if (el) el.classList.toggle('open');
+});
 
 function card(it) {
   const el = document.createElement('article');

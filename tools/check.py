@@ -21,6 +21,7 @@ def main() -> None:
     if not path.exists():
         sys.exit(f"нет файла {path} — сначала make build")
 
+    root = pathlib.Path(__file__).resolve().parent.parent
     data = json.loads(path.read_text(encoding="utf-8"))
     ideas = data.get("ideas") or []
     sections = set(data.get("sections") or [])
@@ -37,10 +38,15 @@ def main() -> None:
         diff = it.get("diff")
         if diff is not None and not (isinstance(diff, int) and 0 <= diff <= 10):
             problems.append(f"#{n}: сложность вне шкалы — {diff!r}")
-        for field in ("link", "video"):
-            url = it.get(field) or ""
-            if url and not re.match(r"^https?://", url):
-                problems.append(f"#{n}: {field} не похоже на ссылку — {url[:40]}")
+        link = it.get("link") or ""
+        if link and not re.match(r"^https?://", link):
+            problems.append(f"#{n}: link не похоже на ссылку — {link[:40]}")
+        # видео лежит либо в репозитории рядом с сайтом, либо на стороннем хосте
+        video = it.get("video") or ""
+        if video and not re.match(r"^(https?://|assets/video/[\w.\-]+\.(mp4|webm))$", video):
+            problems.append(f"#{n}: video не похоже на путь к ролику — {video[:40]}")
+        if video and video.startswith("assets/") and not (root / video).exists():
+            problems.append(f"#{n}: файла нет — {video}")
 
     described = sum(1 for it in ideas if it.get("desc"))
     rated = sum(1 for it in ideas if it.get("diff") is not None)

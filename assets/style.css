@@ -42,7 +42,12 @@ body {
 .wrap {
   width: min(1240px, 100% - 40px);
   margin-inline: auto;
+  min-width: 0;
 }
+
+/* длинные слова и ссылки в описаниях не должны растягивать сетку на узких экранах */
+.card, .grid, .sections { min-width: 0; }
+.card h2, .card p, .tag { overflow-wrap: anywhere; }
 
 /* ==========================
    ===      Шапка         ===
@@ -261,6 +266,8 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .filter-label {
@@ -270,7 +277,7 @@ h1 {
   letter-spacing: .08em;
 }
 
-.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
 
 .chips .chip { padding: 6px 12px; font-size: 13px; }
 
@@ -334,12 +341,34 @@ h1 {
   color: var(--subtext0);
   font-size: 14.5px;
   line-height: 1.62;
+  /* длинные описания рвали сетку — держим карточки одного порядка, полный текст по клику */
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
+.card.open p { -webkit-line-clamp: unset; }
+
+.card.clamped { cursor: pointer; }
+
+.card.clamped::after {
+  content: "Читать целиком";
+  align-self: flex-start;
+  order: 1;                 /* подсказка идёт сразу за текстом, метки и ссылка — ниже */
+  margin-top: -4px;
+  font-size: 12.5px;
+  color: var(--overlay1);
+  border-bottom: 1px dashed var(--surface2);
+}
+
+.card.clamped.open::after { content: "Свернуть"; }
 
 .card-foot {
   display: flex;
   align-items: center;
   gap: 10px;
+  order: 2;
   margin-top: auto;
   padding-top: 4px;
   flex-wrap: wrap;
@@ -465,6 +494,7 @@ mark {
   .search-row { flex-direction: column; align-items: stretch; }
   .lucky { width: 100%; }
   .filters { gap: 14px; }
+  .filter-group { flex-direction: column; align-items: flex-start; gap: 7px; width: 100%; }
   .reset { margin-left: 0; }
 }
 
