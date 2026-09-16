@@ -101,8 +101,14 @@ function slide(it) {
     v.preload = 'none';
     el.append(v);
   } else if (it.yt) {
-    // сам плеер создаётся только когда слайд на экране — иначе браузер уляжет от сотни iframe
+    // превью рисуется сразу — плеер догоняет, пока кадр уже на экране
     el.dataset.yt = it.yt;
+    const img = document.createElement('img');
+    img.className = 'poster';
+    img.src = 'https://i.ytimg.com/vi/' + it.yt + '/hqdefault.jpg';
+    img.alt = '';
+    img.decoding = 'async';   // без lazy: слайды и так рисуются порциями, кадр нужен сразу
+    el.append(img);
     const box = document.createElement('div');
     box.className = 'player';
     el.append(box);
@@ -173,24 +179,47 @@ function slide(it) {
 // ===   Активный слайд   ===
 // ==========================
 
+// плеер поднимаем через официальное API: только оно говорит, когда ролик реально пошёл,
+// а до этого кадр-превью должен оставаться сверху — иначе пользователь смотрит на чёрный квадрат
+let ytReady = false;
+const pending = [];
+window.onYouTubeIframeAPIReady = () => {
+  ytReady = true;
+  while (pending.length) startPlayer(pending.shift());
+};
+
 function startPlayer(el) {
-  const id = el.dataset.yt;
-  const box = el.querySelector('.player');
-  if (!id || !box || box.firstChild) return;
-  const f = document.createElement('iframe');
-  f.src = 'https://www.youtube-nocookie.com/embed/' + id
-    + '?autoplay=1&mute=' + (state.sound ? 0 : 1)
-    + '&controls=0&loop=1&playlist=' + id
-    + '&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1';
-  f.allow = 'autoplay; encrypted-media; picture-in-picture';
-  f.setAttribute('frameborder', '0');
-  f.setAttribute('tabindex', '-1');
-  box.append(f);
+  const id = el && el.dataset.yt;
+  const box = el && el.querySelector('.player');
+  if (!id || !box || el._player) return;
+  if (!ytReady) {
+    if (!pending.includes(el)) pending.push(el);
+    return;
+  }
+  const host = document.createElement('div');
+  box.append(host);
+  el._player = new YT.Player(host, {
+    videoId: id,
+    playerVars: {
+      autoplay: 1, controls: 0, loop: 1, playlist: id, mute: state.sound ? 0 : 1,
+      modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3, disablekb: 1,
+    },
+    events: {
+      onReady: e => { state.sound ? e.target.unMute() : e.target.mute(); e.target.playVideo(); },
+      onStateChange: e => { if (e.data === YT.PlayerState.PLAYING) el.classList.add('playing'); },
+      onError: () => el.classList.remove('playing'),   // ролик недоступен — остаётся кадр
+    },
+  });
 }
 
 function stopPlayer(el) {
+  if (el._player) {
+    try { el._player.destroy(); } catch (_) {}
+    el._player = null;
+  }
   const box = el.querySelector('.player');
-  if (box) box.textContent = '';    // снос iframe — самый надёжный способ остановить ролик
+  if (box) box.textContent = '';
+  el.classList.remove('playing');
 }
 
 const io = new IntersectionObserver(entries => {
@@ -262,9 +291,9 @@ $('#sound').addEventListener('click', () => {
   if (!cur) return;
   const v = cur.querySelector('video');
   if (v) { v.muted = !state.sound; v.play().catch(() => {}); }
-  // у встроенного плеера громкость меняется только пересозданием — звук после жеста разрешён
-  stopPlayer(cur);
-  startPlayer(cur);
+  if (cur._player && cur._player.unMute) {
+    state.sound ? cur._player.unMute() : cur._player.mute();
+  }
 });
 
 $('#pick').addEventListener('click', openSheet);
