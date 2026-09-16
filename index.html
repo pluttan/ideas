@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Каталог идей — что можно смастерить</title>
+<meta name="description" content="Справочник самодельных проектов: что можно собрать своими руками, зачем это нужно и насколько сложно повторить.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128161;</text></svg>">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Каталог идей</h1>
+        <p class="tagline">Что можно смастерить своими руками и зачем оно нужно</p>
+      </div>
+    </div>
+    <div class="counter" id="counter" aria-live="polite"></div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="wrap">
+    <div class="search-row">
+      <div class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input type="search" id="q" placeholder="Искать идею — «часы», «подсветка», «стол»…" autocomplete="off" spellcheck="false">
+        <button type="button" id="clear-q" class="clear" title="Очистить" hidden>&times;</button>
+      </div>
+      <button type="button" id="lucky" class="lucky">Случайная идея</button>
+    </div>
+
+    <nav class="sections" id="sections" aria-label="Разделы"></nav>
+
+    <div class="filters">
+      <div class="filter-group" role="group" aria-label="Сложность">
+        <span class="filter-label">Сложность</span>
+        <div class="chips" id="difficulty"></div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Порядок</span>
+        <div class="chips" id="sort"></div>
+      </div>
+      <button type="button" id="reset" class="reset" hidden>Сбросить всё</button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div id="empty" class="empty" hidden>
+    <p class="empty-title">Ничего не нашлось</p>
+    <p>Попробуй другое слово или сбрось фильтры.</p>
+  </div>
+  <div id="grid" class="grid"></div>
+  <div id="sentinel" class="sentinel"></div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>Личная подборка идей для повторения. Сложность — субъективная оценка того, насколько тяжело сделать это дома.</p>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
