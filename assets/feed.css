@@ -298,6 +298,48 @@ html, body {
   opacity: .5;
 }
 
+/* встроенный ролик на весь экран: 16:9 растягивается по большей стороне, поля обрезаются */
+.player {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.player iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* с запасом по масштабу: за край уезжают шапка с названием ролика и кнопки плеера */
+  transform: translate(-50%, -50%) scale(1.35);
+  width: 100vw;
+  height: 56.25vw;
+  min-height: 100dvh;
+  min-width: 177.78dvh;
+  border: 0;
+  opacity: .5;
+  pointer-events: none;   /* иначе плеер съедает свайп */
+}
+
+.sound {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(205,214,244,.16);
+  background: rgba(17,17,27,.5);
+  backdrop-filter: blur(10px);
+  color: var(--subtext1);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sound[aria-pressed="true"] {
+  border-color: rgba(166,227,161,.5);
+  background: rgba(166,227,161,.16);
+  color: var(--text);
+}
+
 /* ==========================
    ===      Шторка        ===
    ========================== */

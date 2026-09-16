@@ -9,6 +9,7 @@ catalog.jsonl — источник каталога, по одной идее н
 import argparse
 import json
 import pathlib
+import re
 import sys
 
 FIELDS = ("title", "desc", "diff", "section", "tags", "link", "video")
@@ -49,6 +50,15 @@ def load(path: pathlib.Path) -> list[dict]:
     return items
 
 
+YT = re.compile(r"(?:youtu\.be/|youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/))([\w-]{6,})")
+
+
+def youtube_id(link: str) -> str:
+    """id ролика — лента крутит его прямо в слайде, а не только ссылкой."""
+    m = YT.search(link or "")
+    return m.group(1) if m else ""
+
+
 def clean(raw: list[dict]) -> list[dict]:
     out = []
     for it in raw:
@@ -56,14 +66,16 @@ def clean(raw: list[dict]) -> list[dict]:
         if not title:
             continue
         diff = it.get("diff")
+        link = (it.get("link") or "").strip()
         out.append({
             "title": title,
             "desc": (it.get("desc") or "").strip(),
             "diff": diff if isinstance(diff, int) else None,
             "section": (it.get("section") or "Прочее").strip(),
             "tags": [t.strip() for t in (it.get("tags") or []) if t.strip()][:3],
-            "link": (it.get("link") or "").strip(),
+            "link": link,
             "video": (it.get("video") or "").strip(),
+            "yt": youtube_id(link),
         })
     return out
 

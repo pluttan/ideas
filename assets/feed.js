@@ -19,7 +19,7 @@ const TINTS = [
   ['rgba(116,199,236,.26)', 'rgba(203,166,247,.18)'],
 ];
 
-const state = { all: [], view: [], shown: 0, section: null, current: 0 };
+const state = { all: [], view: [], shown: 0, section: null, current: 0, sound: false };
 
 const $ = s => document.querySelector(s);
 const feed = $('#feed');
@@ -100,6 +100,12 @@ function slide(it) {
     v.playsInline = true;
     v.preload = 'none';
     el.append(v);
+  } else if (it.yt) {
+    // сам плеер создаётся только когда слайд на экране — иначе браузер уляжет от сотни iframe
+    el.dataset.yt = it.yt;
+    const box = document.createElement('div');
+    box.className = 'player';
+    el.append(box);
   }
 
   if (it.diff !== null && it.diff !== undefined) {
@@ -167,16 +173,40 @@ function slide(it) {
 // ===   Активный слайд   ===
 // ==========================
 
+function startPlayer(el) {
+  const id = el.dataset.yt;
+  const box = el.querySelector('.player');
+  if (!id || !box || box.firstChild) return;
+  const f = document.createElement('iframe');
+  f.src = 'https://www.youtube-nocookie.com/embed/' + id
+    + '?autoplay=1&mute=' + (state.sound ? 0 : 1)
+    + '&controls=0&loop=1&playlist=' + id
+    + '&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1';
+  f.allow = 'autoplay; encrypted-media; picture-in-picture';
+  f.setAttribute('frameborder', '0');
+  f.setAttribute('tabindex', '-1');
+  box.append(f);
+}
+
+function stopPlayer(el) {
+  const box = el.querySelector('.player');
+  if (box) box.textContent = '';    // снос iframe — самый надёжный способ остановить ролик
+}
+
 const io = new IntersectionObserver(entries => {
   for (const e of entries) {
     const v = e.target.querySelector('video');
     if (e.isIntersecting && e.intersectionRatio > 0.6) {
       state.current = [...feed.children].indexOf(e.target);
       updatePos();
-      if (v) { v.preload = 'auto'; v.play().catch(() => {}); }
+      if (v) { v.preload = 'auto'; v.muted = !state.sound; v.play().catch(() => {}); }
+      startPlayer(e.target);
+      const next = e.target.nextElementSibling;   // следующий готовим заранее, чтобы не ждать загрузки
+      if (next) startPlayer(next);
       if (state.shown - state.current <= NEAR_END) render();
-    } else if (v) {
-      v.pause();
+    } else {
+      if (v) v.pause();
+      if (e.intersectionRatio === 0) stopPlayer(e.target);   // сосед остаётся заряженным
     }
   }
 }, { root: feed, threshold: [0, 0.6, 1] });
@@ -223,6 +253,19 @@ function buildSheet() {
 
 function openSheet() { $('#sheet').hidden = false; }
 function closeSheet() { $('#sheet').hidden = true; }
+
+$('#sound').addEventListener('click', () => {
+  state.sound = !state.sound;
+  $('#sound').setAttribute('aria-pressed', String(state.sound));
+  $('#sound').textContent = state.sound ? 'Звук вкл' : 'Звук выкл';
+  const cur = feed.children[state.current];
+  if (!cur) return;
+  const v = cur.querySelector('video');
+  if (v) { v.muted = !state.sound; v.play().catch(() => {}); }
+  // у встроенного плеера громкость меняется только пересозданием — звук после жеста разрешён
+  stopPlayer(cur);
+  startPlayer(cur);
+});
 
 $('#pick').addEventListener('click', openSheet);
 $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
