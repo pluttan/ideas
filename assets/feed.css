@@ -144,20 +144,7 @@ html, body {
     var(--base);
 }
 
-/* затемнение ровно под текстом, картинку не глушим */
-.slide::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg,
-    rgba(17,17,27,.42) 0%,
-    rgba(17,17,27,.06) 18%,
-    rgba(17,17,27,0) 38%,
-    rgba(17,17,27,.72) 76%,
-    rgba(17,17,27,.93) 100%);
-}
+/* затемнения нет вовсе — картинка идёт как есть, текст держится на собственной тени */
 
 .slide > .body { position: relative; z-index: 1; }
 .slide > .gauge { z-index: 2; }   /* у шкалы уже своё absolute — трогаем только слой */
@@ -192,9 +179,25 @@ html, body {
   color: var(--subtext1);
 }
 
-/* кадры бывают светлыми — тень держит текст читаемым без плотной заливки */
-.slide h2, .slide p { text-shadow: 0 2px 16px rgba(17,17,27,.6); }
-.gauge b, .gauge span { text-shadow: 0 2px 10px rgba(17,17,27,.85); }
+/* заливки под текстом нет — читаемость держится только на тенях */
+.slide h2 {
+  /* обводка в четыре стороны плюс мягкое свечение: держит текст на любом кадре, кадр не глушим */
+  text-shadow:
+    1px 1px 0 rgba(17,17,27,.85), -1px 1px 0 rgba(17,17,27,.85),
+    1px -1px 0 rgba(17,17,27,.85), -1px -1px 0 rgba(17,17,27,.85),
+    0 3px 24px rgba(17,17,27,.95), 0 0 70px rgba(17,17,27,.8);
+}
+
+.slide p {
+  text-shadow:
+    1px 1px 0 rgba(17,17,27,.8), -1px 1px 0 rgba(17,17,27,.8),
+    1px -1px 0 rgba(17,17,27,.8), -1px -1px 0 rgba(17,17,27,.8),
+    0 2px 18px rgba(17,17,27,.95), 0 0 46px rgba(17,17,27,.85);
+  color: #fff;
+}
+
+.gauge b, .gauge span { text-shadow: 0 1px 2px rgba(17,17,27,.9), 0 2px 14px rgba(17,17,27,.9); }
+.more { text-shadow: 0 1px 8px rgba(17,17,27,.9); }
 
 .slide h2 {
   margin: 0;
@@ -335,7 +338,7 @@ html, body {
   top: 50%;
   left: 50%;
   /* с запасом по масштабу: за край уезжают шапка с названием ролика и кнопки плеера */
-  transform: translate(-50%, -50%) scale(1.35);
+  transform: translate(-50%, -50%) scale(1.45);
   width: 100vw;
   height: 56.25vw;
   min-height: 100dvh;

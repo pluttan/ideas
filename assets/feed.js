@@ -206,13 +206,19 @@ function startPlayer(el) {
     },
     events: {
       onReady: e => { state.sound ? e.target.unMute() : e.target.mute(); e.target.playVideo(); },
-      onStateChange: e => { if (e.data === YT.PlayerState.PLAYING) el.classList.add('playing'); },
+      onStateChange: e => {
+        if (e.data !== YT.PlayerState.PLAYING) return;
+        // первые мгновения плеер показывает своё название и кнопки — держим кадр, пока они не уйдут
+        clearTimeout(el._t);
+        el._t = setTimeout(() => el.classList.add('playing'), 1100);
+      },
       onError: () => el.classList.remove('playing'),   // ролик недоступен — остаётся кадр
     },
   });
 }
 
 function stopPlayer(el) {
+  clearTimeout(el._t);
   if (el._player) {
     try { el._player.destroy(); } catch (_) {}
     el._player = null;
