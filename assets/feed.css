@@ -116,6 +116,7 @@ html, body {
   scroll-snap-type: y mandatory;
   scrollbar-width: none;
   overscroll-behavior-y: contain;
+  overflow-anchor: none;   /* слайды позади снимаем сами — браузер не должен ещё раз двигать ленту */
 }
 
 .feed::-webkit-scrollbar { display: none; }
