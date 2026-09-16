@@ -115,6 +115,21 @@ function ensureAhead() {
 // ===       Слайд        ===
 // ==========================
 
+// кадр на весь экран: сначала просим самый крупный, при неудаче спускаемся ниже.
+// на отсутствующий размер ютуб отвечает либо ошибкой, либо заглушкой 120 пикселей шириной
+const POSTER_SIZES = ['maxresdefault', 'sddefault', 'hqdefault'];
+
+function poster(img, id) {
+  let step = 0;
+  const next = () => {
+    if (step >= POSTER_SIZES.length) return;
+    img.src = 'https://i.ytimg.com/vi/' + id + '/' + POSTER_SIZES[step++] + '.jpg';
+  };
+  img.addEventListener('error', next);
+  img.addEventListener('load', () => { if (img.naturalWidth <= 120) next(); });
+  next();
+}
+
 function slide(it, pos) {
   const el = document.createElement('section');
   el.className = 'slide';
@@ -136,10 +151,10 @@ function slide(it, pos) {
     el.dataset.yt = it.yt;
     const img = document.createElement('img');
     img.className = 'poster';
-    img.src = 'https://i.ytimg.com/vi/' + it.yt + '/hqdefault.jpg';
     img.alt = '';
     img.decoding = 'async';
     img.fetchPriority = pos - state.current < 4 ? 'high' : 'auto';
+    poster(img, it.yt);
     el.append(img);
     const box = document.createElement('div');
     box.className = 'player';
