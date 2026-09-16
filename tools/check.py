@@ -43,7 +43,7 @@ def main() -> None:
             problems.append(f"#{n}: link не похоже на ссылку — {link[:40]}")
         # видео лежит либо в репозитории рядом с сайтом, либо на стороннем хосте
         video = it.get("video") or ""
-        if video and not re.match(r"^(https?://|assets/video/[\w.\-]+\.(mp4|webm))$", video):
+        if video and not re.match(r"^(https?://\S+\.(mp4|webm)|assets/video/[\w.\-]+\.(mp4|webm))$", video):
             problems.append(f"#{n}: video не похоже на путь к ролику — {video[:40]}")
         if video and video.startswith("assets/") and not (root / video).exists():
             problems.append(f"#{n}: файла нет — {video}")

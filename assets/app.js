@@ -204,7 +204,7 @@ function card(it) {
     const v = document.createElement('video');
     v.src = it.video;
     v.controls = true;
-    v.preload = 'none';
+    v.preload = 'metadata';   // первый кадр вместо чёрного прямоугольника
     v.playsInline = true;
     el.append(v);
   }
