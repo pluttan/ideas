@@ -16,6 +16,12 @@ const SORTS = [
   { key: 'easy',    label: 'Сначала простые' },
   { key: 'hard',    label: 'Сначала сложные' },
   { key: 'az',      label: 'По алфавиту' },
+  { key: 'new',     label: 'Сначала новые' },
+];
+// picks stack with every other filter: each one narrows the list further
+const PICKS = [
+  { key: 'fav',   label: 'Избранное', test: it => it.fav },
+  { key: 'video', label: 'С видео',   test: it => Boolean(it.video || it.yt) },
 ];
 
 const state = {
@@ -26,6 +32,7 @@ const state = {
   section: null,
   diff: null,
   sort: 'default',
+  picks: new Set(),
 };
 
 const $ = sel => document.querySelector(sel);
@@ -78,6 +85,22 @@ function buildSections(sections) {
 }
 
 function buildChips() {
+  const pbox = $('#picks');
+  for (const pk of PICKS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (pk.key === 'fav' ? ' chip-fav' : '');
+    b.dataset.pick = pk.key;
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `${pk.label}<span class="num">${state.all.filter(pk.test).length}</span>`;
+    b.addEventListener('click', () => {
+      state.picks.has(pk.key) ? state.picks.delete(pk.key) : state.picks.add(pk.key);
+      syncPressed(pbox, 'pick');
+      apply();
+    });
+    pbox.append(b);
+  }
+
   const dbox = $('#difficulty');
   for (const r of DIFF_RANGES) {
     const b = document.createElement('button');
@@ -114,7 +137,8 @@ function buildChips() {
 function syncPressed(box, kind) {
   for (const b of box.querySelectorAll('.chip')) {
     const v = kind === 'section' ? (b.dataset.section || null) : b.dataset[kind];
-    const on = kind === 'sort' ? state.sort === v : state[kind] === v;
+    const on = kind === 'pick' ? state.picks.has(v)
+      : kind === 'sort' ? state.sort === v : state[kind] === v;
     b.setAttribute('aria-pressed', String(on));
   }
 }
@@ -127,10 +151,12 @@ function apply() {
   const q = state.q.trim().toLowerCase();
   const words = q ? q.split(/\s+/) : [];
   const range = DIFF_RANGES.find(r => r.key === state.diff);
+  const picks = PICKS.filter(pk => state.picks.has(pk.key));
 
   state.view = state.all.filter(it => {
     if (state.section && it.section !== state.section) return false;
     if (range && !range.test(it.diff === undefined ? null : it.diff)) return false;
+    for (const pk of picks) if (!pk.test(it)) return false;
     for (const w of words) if (!it.hay.includes(w)) return false;
     return true;
   });
@@ -139,6 +165,8 @@ function apply() {
     easy: (a, b) => (a.diff ?? 99) - (b.diff ?? 99),
     hard: (a, b) => (b.diff ?? -1) - (a.diff ?? -1),
     az: (a, b) => a.title.localeCompare(b.title, 'ru'),
+    // undated ideas sink to the bottom instead of floating above everything
+    new: (a, b) => (b.date || '').localeCompare(a.date || '') || a.i - b.i,
     default: (a, b) => a.i - b.i,
   }[state.sort];
   state.view.sort(by);
@@ -150,7 +178,7 @@ function apply() {
   $('#empty').hidden = state.view.length > 0;
   $('#counter').innerHTML = `<b>${state.view.length}</b> ${plural(state.view.length, 'идея', 'идеи', 'идей')}`
     + (state.view.length !== state.all.length ? ` из ${state.all.length}` : '');
-  $('#reset').hidden = !(state.q || state.section || state.diff || state.sort !== 'default');
+  $('#reset').hidden = !(state.q || state.section || state.diff || state.picks.size || state.sort !== 'default');
   $('#clear-q').hidden = !state.q;
   writeHash();
 }
@@ -182,7 +210,7 @@ grid.addEventListener('click', e => {
 
 function card(it) {
   const el = document.createElement('article');
-  el.className = 'card';
+  el.className = it.fav ? 'card fav' : 'card';
   el.id = 'i' + it.i;
 
   const top = document.createElement('div');
@@ -219,6 +247,12 @@ function card(it) {
 
   const foot = document.createElement('div');
   foot.className = 'card-foot';
+  if (it.fav) {
+    const star = document.createElement('span');
+    star.className = 'tag tag-fav';
+    star.textContent = '★ Избранное';
+    foot.append(star);
+  }
   const tag = document.createElement('span');
   tag.className = 'tag';
   tag.textContent = it.section;
@@ -291,7 +325,9 @@ $('#clear-q').addEventListener('click', () => {
 
 $('#reset').addEventListener('click', () => {
   state.q = ''; state.section = null; state.diff = null; state.sort = 'default';
+  state.picks.clear();
   $('#q').value = '';
+  syncPressed($('#picks'), 'pick');
   syncPressed($('#sections'), 'section');
   syncPressed($('#difficulty'), 'diff');
   syncPressed($('#sort'), 'sort');
@@ -331,6 +367,7 @@ function writeHash() {
   if (state.q) p.set('q', state.q);
   if (state.section) p.set('r', state.section);
   if (state.diff) p.set('d', state.diff);
+  if (state.picks.size) p.set('p', [...state.picks].join(','));
   if (state.sort !== 'default') p.set('s', state.sort);
   const h = p.toString();
   history.replaceState(null, '', h ? '#' + h : location.pathname);
@@ -342,7 +379,10 @@ function readHash() {
   state.section = p.get('r');
   state.diff = p.get('d');
   state.sort = p.get('s') || 'default';
+  const known = new Set(PICKS.map(pk => pk.key));
+  state.picks = new Set((p.get('p') || '').split(',').filter(k => known.has(k)));
   $('#q').value = state.q;
+  syncPressed($('#picks'), 'pick');
   syncPressed($('#sections'), 'section');
   syncPressed($('#difficulty'), 'diff');
   syncPressed($('#sort'), 'sort');

@@ -262,6 +262,13 @@ h1 {
 
 .chip[aria-pressed="true"] .num { color: var(--mauve); }
 
+/* favourites get their own accent so the toggle reads as "starred", not just "on" */
+.chip-fav[aria-pressed="true"] {
+  background: rgba(249,226,175,.14);
+  border-color: var(--yellow);
+}
+.chip-fav[aria-pressed="true"] .num { color: var(--yellow); }
+
 .filters {
   display: flex;
   align-items: center;
@@ -388,6 +395,11 @@ h1 {
   background: var(--surface0);
   border-radius: 7px;
   padding: 4px 9px;
+}
+
+.tag-fav {
+  color: var(--yellow);
+  background: rgba(249,226,175,.12);
 }
 
 .src {

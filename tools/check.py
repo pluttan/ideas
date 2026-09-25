@@ -48,6 +48,10 @@ def main() -> None:
         if video and video.startswith("assets/") and not (root / video).exists():
             problems.append(f"#{n}: файла нет — {video}")
 
+        date = it.get("date") or ""
+        if date and not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+            problems.append(f"#{n}: дата не в формате ГГГГ-ММ-ДД — {date}")
+
         image = it.get("image") or ""
         if image and not re.match(r"^(https?://\S+\.(jpg|jpeg|png|webp)|assets/img/[\w.\-]+)$", image):
             problems.append(f"#{n}: image не похоже на путь к картинке — {image[:40]}")

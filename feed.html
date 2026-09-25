@@ -14,7 +14,7 @@
 <body>
 
 <header class="bar">
-  <a class="back" href="index.html" title="Открыть сеткой">
+  <a class="back" href="index.html" title="Открыть сеткой" aria-label="Открыть сеткой">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     <span>Сеткой</span>
   </a>
@@ -25,7 +25,9 @@
 
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-card">
-    <p class="sheet-title">Показывать</p>
+    <p class="sheet-title">Подборка</p>
+    <div class="sheet-list" id="sheet-picks"></div>
+    <p class="sheet-title">Раздел</p>
     <div class="sheet-list" id="sheet-list"></div>
   </div>
 </div>

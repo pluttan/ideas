@@ -52,7 +52,7 @@ html, body {
   pointer-events: none;
 }
 
-.bar > * { pointer-events: auto; }
+.bar > * { pointer-events: auto; flex-shrink: 0; }
 
 .back {
   display: inline-flex;
@@ -89,7 +89,9 @@ html, body {
   font: inherit;
   font-size: 13.5px;
   cursor: pointer;
-  max-width: 48vw;
+  /* the only item allowed to shrink: the rest of the bar must stay readable */
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -97,6 +99,8 @@ html, body {
 
 .pos {
   margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 12.5px;
   color: var(--subtext0);
   font-variant-numeric: tabular-nums;
@@ -168,6 +172,12 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .pill {
@@ -430,6 +440,15 @@ html, body {
 
 .sheet-list .num { color: var(--overlay1); margin-left: 6px; font-size: 12px; }
 
+.sheet-list + .sheet-title { margin-top: 20px; }
+
+.sheet-list .fav-toggle[aria-pressed="true"],
+.pill-fav {
+  background: rgba(249,226,175,.14);
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
 /* ==========================
    ===     Подсказка      ===
    ========================== */
@@ -471,6 +490,8 @@ html, body {
 
 @media (max-width: 640px) {
   .body { width: calc(100% - 36px); gap: 12px; }
+  /* phones: the grid link keeps only its icon so the section button stays legible */
+  .back span { display: none; }
   .gauge { right: 16px; }
   .go { margin-left: 0; }
 }

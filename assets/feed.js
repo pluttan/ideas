@@ -21,7 +21,7 @@ const TINTS = [
   ['rgba(116,199,236,.26)', 'rgba(203,166,247,.18)'],
 ];
 
-const state = { all: [], view: [], built: 0, section: null, current: 0, sound: false };
+const state = { all: [], view: [], built: 0, section: null, fav: false, current: 0, sound: false };
 
 const $ = s => document.querySelector(s);
 const feed = $('#feed');
@@ -35,7 +35,9 @@ fetch('data/ideas.json')
   .then(data => {
     state.sections = data.sections;
     state.all = data.ideas.map((it, i) => ({ ...it, i }));
-    state.section = new URLSearchParams(location.hash.slice(1)).get('r');
+    const h = new URLSearchParams(location.hash.slice(1));
+    state.section = h.get('r');
+    state.fav = h.get('f') === '1';
     buildSheet();
     apply();
   })
@@ -55,7 +57,8 @@ function shuffled(list) {
 }
 
 function apply() {
-  const pool = state.section ? state.all.filter(it => it.section === state.section) : state.all;
+  const pool = state.all.filter(it =>
+    (!state.section || it.section === state.section) && (!state.fav || it.fav));
   state.view = shuffled(pool);
   state.built = 0;
   state.current = 0;
@@ -64,10 +67,15 @@ function apply() {
   grow(BATCH);
   feed.scrollTo({ top: 0 });
   if (feed.firstElementChild) activate(feed.firstElementChild);
-  $('#pick').textContent = state.section || 'Все разделы';
+  else feed.innerHTML = '<section class="slide"><div class="body"><h2>Здесь пусто</h2>'
+    + '<p>В этом разделе нет избранных идей — выбери другой раздел или сними «Избранное».</p></div></section>';
+  $('#pick').textContent = state.fav
+    ? (state.section ? '★ ' + state.section : '★ Избранное')
+    : (state.section || 'Все разделы');
   updatePos();
   const p = new URLSearchParams();
   if (state.section) p.set('r', state.section);
+  if (state.fav) p.set('f', '1');
   history.replaceState(null, '', p.toString() ? '#' + p : location.pathname);
 }
 
@@ -180,10 +188,19 @@ function slide(it, pos) {
   const body = document.createElement('div');
   body.className = 'body';
 
+  const pills = document.createElement('div');
+  pills.className = 'pills';
   const pill = document.createElement('span');
   pill.className = 'pill';
   pill.textContent = it.section;
-  body.append(pill);
+  pills.append(pill);
+  if (it.fav) {
+    const star = document.createElement('span');
+    star.className = 'pill pill-fav';
+    star.textContent = '★ Избранное';
+    pills.append(star);
+  }
+  body.append(pills);
 
   const h = document.createElement('h2');
   h.textContent = it.title;
@@ -350,7 +367,9 @@ setInterval(() => {
 
 
 function updatePos() {
-  $('#pos').textContent = `${Math.min(state.current + 1, state.view.length)} / ${state.view.length}`;
+  const n = state.view.length;
+  // the empty-state slide has no position, so guard against NaN
+  $('#pos').textContent = n ? `${Math.min((state.current || 0) + 1, n)} / ${n}` : '0 / 0';
 }
 
 feed.addEventListener('scroll', () => {
@@ -365,6 +384,20 @@ setTimeout(() => $('#hint').classList.add('gone'), 5000);
 // ==========================
 
 function buildSheet() {
+  // favourites stack with the section choice, so they live in their own row
+  const favBtn = document.createElement('button');
+  favBtn.type = 'button';
+  favBtn.className = 'fav-toggle';
+  favBtn.setAttribute('aria-pressed', String(state.fav));
+  favBtn.innerHTML = `★ Избранное<span class="num">${state.all.filter(it => it.fav).length}</span>`;
+  favBtn.addEventListener('click', () => {
+    state.fav = !state.fav;
+    favBtn.setAttribute('aria-pressed', String(state.fav));
+    closeSheet();
+    apply();
+  });
+  $('#sheet-picks').append(favBtn);
+
   const box = $('#sheet-list');
   const counts = new Map();
   for (const it of state.all) counts.set(it.section, (counts.get(it.section) || 0) + 1);
