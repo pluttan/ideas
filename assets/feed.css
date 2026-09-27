@@ -164,7 +164,7 @@ html, body { height: 100%; overflow: hidden; background: var(--crust); }
 .cap h2 {
   margin: 0;
   font-size: clamp(23px, 3.4vw, 34px);
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -.02em;
   line-height: 1.12;
   color: #eef1fb;
