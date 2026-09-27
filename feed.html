@@ -5,36 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Лента идей</title>
 <meta name="description" content="Лента самодельных проектов: листай и находи, что собрать своими руками.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#11111b">
+<link rel="preload" href="assets/fonts/geist-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/base.css">
 <link rel="stylesheet" href="assets/feed.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128161;</text></svg>">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
 
-<header class="bar">
-  <a class="back" href="index.html" title="Открыть сеткой" aria-label="Открыть сеткой">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-    <span>Сеткой</span>
+<header class="top">
+  <a class="round" href="index.html" title="Открыть сеткой">
+    <svg class="i" aria-hidden="true"><use href="assets/icons.svg#grid"/></svg><span class="sr">Открыть сеткой</span>
   </a>
-  <button type="button" id="pick" class="pick">Все разделы</button>
-  <button type="button" id="sound" class="sound" aria-pressed="false">Звук выкл</button>
+  <button type="button" id="pick" class="pick" aria-haspopup="dialog">
+    <span id="pick-label">Все разделы</span>
+    <svg class="i" aria-hidden="true"><use href="assets/icons.svg#caret"/></svg>
+  </button>
+  <button type="button" id="sound" class="round" aria-pressed="false" title="Звук">
+    <svg class="i" aria-hidden="true"><use id="sound-icon" href="assets/icons.svg#mute"/></svg><span class="sr">Звук</span>
+  </button>
   <span class="pos" id="pos"></span>
 </header>
 
-<div class="sheet" id="sheet" hidden>
+<div class="sheet" id="sheet" role="dialog" aria-label="Что показывать" hidden>
   <div class="sheet-card">
-    <p class="sheet-title">Подборка</p>
-    <div class="sheet-list" id="sheet-picks"></div>
-    <p class="sheet-title">Раздел</p>
-    <div class="sheet-list" id="sheet-list"></div>
+    <button type="button" class="row switch" id="fav-toggle" aria-pressed="false">
+      <svg class="i" aria-hidden="true"><use href="assets/icons.svg#star"/></svg>
+      <span>Только избранное</span>
+      <span class="n" id="fav-count"></span>
+      <span class="knob" aria-hidden="true"></span>
+    </button>
+    <div class="rows" id="sheet-list"></div>
   </div>
 </div>
 
 <main class="feed" id="feed"></main>
 
-<div class="hint" id="hint"><span class="hint-arrow" aria-hidden="true"></span>листай вверх</div>
+<p class="hint" id="hint">Листай вверх</p>
 
 <script src="assets/feed.js"></script>
 <script src="https://www.youtube.com/iframe_api" async></script>

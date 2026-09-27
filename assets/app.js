@@ -1,28 +1,31 @@
 'use strict';
 
 // ==========================
-// ===   Состояние UI     ===
+// ===      Settings      ===
 // ==========================
 
-const PAGE = 48;               // карточек за один проход отрисовки
+const PAGE = 36;               // tiles per render pass
+const ICONS = 'assets/icons.svg';
 const DIFF_RANGES = [
-  { key: 'easy',  label: 'Просто',  hint: '0–2', test: d => d !== null && d <= 2 },
-  { key: 'mid',   label: 'Средне',  hint: '3–5', test: d => d >= 3 && d <= 5 },
-  { key: 'hard',  label: 'Сложно',  hint: '6–8', test: d => d >= 6 && d <= 8 },
-  { key: 'crazy', label: 'Жесть',   hint: '9–10', test: d => d >= 9 },
+  { key: 'easy',  label: 'Просто', test: d => d !== null && d <= 2 },
+  { key: 'mid',   label: 'Средне', test: d => d >= 3 && d <= 5 },
+  { key: 'hard',  label: 'Сложно', test: d => d >= 6 && d <= 8 },
+  { key: 'crazy', label: 'Жесть',  test: d => d >= 9 },
 ];
 const SORTS = [
   { key: 'default', label: 'По разделам' },
+  { key: 'new',     label: 'Сначала новые' },
   { key: 'easy',    label: 'Сначала простые' },
   { key: 'hard',    label: 'Сначала сложные' },
   { key: 'az',      label: 'По алфавиту' },
-  { key: 'new',     label: 'Сначала новые' },
 ];
 // picks stack with every other filter: each one narrows the list further
 const PICKS = [
-  { key: 'fav',   label: 'Избранное', test: it => it.fav },
-  { key: 'video', label: 'С видео',   test: it => Boolean(it.video || it.yt) },
+  { key: 'fav',   label: 'Избранное', icon: 'star', test: it => it.fav },
+  { key: 'video', label: 'С видео',   icon: 'play', test: it => Boolean(it.video || it.yt) },
 ];
+// youtube stills: sd is sharp enough for a tile, hq always exists as the fallback
+const YT_SIZES = ['sddefault', 'hqdefault'];
 
 const state = {
   all: [],
@@ -38,26 +41,40 @@ const state = {
 const $ = sel => document.querySelector(sel);
 const grid = $('#grid');
 
+const icon = (id, cls = 'i') =>
+  `<svg class="${cls}" aria-hidden="true"><use href="${ICONS}#${id}"/></svg>`;
+
 // ==========================
-// ===      Загрузка      ===
+// ===      Loading       ===
 // ==========================
+
+skeleton();
 
 fetch('data/ideas.json')
   .then(r => r.json())
   .then(data => {
-    state.all = data.ideas.map((it, i) => ({ ...it, i, hay: (it.title + ' ' + it.desc + ' ' + (it.tags || []).join(' ')).toLowerCase() }));
+    state.all = data.ideas.map((it, i) => ({
+      ...it, i, hay: (it.title + ' ' + it.desc + ' ' + (it.tags || []).join(' ')).toLowerCase(),
+    }));
     buildSections(data.sections);
-    buildChips();
+    buildControls();
     readHash();
     apply();
   })
   .catch(() => {
+    grid.textContent = '';
     $('#empty').hidden = false;
-    $('#empty').querySelector('.empty-title').textContent = 'Каталог не загрузился';
+    $('#empty .empty-title').textContent = 'Каталог не загрузился';
+    $('#empty p:last-child').textContent = 'Обнови страницу: данные не доехали.';
   });
 
+function skeleton() {
+  const ghost = '<article class="tile ghost"><div class="thumb"></div><i></i><i></i><i></i></article>';
+  grid.innerHTML = ghost.repeat(8);
+}
+
 // ==========================
-// ===      Фильтры       ===
+// ===      Filters       ===
 // ==========================
 
 function buildSections(sections) {
@@ -65,97 +82,93 @@ function buildSections(sections) {
   const counts = new Map();
   for (const it of state.all) counts.set(it.section, (counts.get(it.section) || 0) + 1);
 
-  const mk = (name, label) => {
+  const mk = (name, label, n) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'chip';
-    b.setAttribute('aria-pressed', String(state.section === name));
-    b.dataset.section = name === null ? '' : name;
-    b.innerHTML = label + `<span class="num">${name === null ? state.all.length : (counts.get(name) || 0)}</span>`;
+    b.className = 'tab';
+    b.dataset.section = name || '';
+    b.innerHTML = `${label}<span class="n">${n}</span>`;
     b.addEventListener('click', () => {
       state.section = state.section === name ? null : name;
-      syncPressed(box, 'section');
+      sync();
       apply();
     });
     return b;
   };
 
-  box.append(mk(null, 'Все идеи'));
-  for (const s of sections) if (counts.get(s)) box.append(mk(s, s));
+  box.append(mk(null, 'Все', state.all.length));
+  for (const s of sections) if (counts.get(s)) box.append(mk(s, s, counts.get(s)));
 }
 
-function buildChips() {
+function buildControls() {
   const pbox = $('#picks');
   for (const pk of PICKS) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'chip' + (pk.key === 'fav' ? ' chip-fav' : '');
+    b.className = 'toggle';
     b.dataset.pick = pk.key;
-    b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `${pk.label}<span class="num">${state.all.filter(pk.test).length}</span>`;
+    b.innerHTML = `${icon(pk.icon)}${pk.label}<span class="n">${state.all.filter(pk.test).length}</span>`;
     b.addEventListener('click', () => {
       state.picks.has(pk.key) ? state.picks.delete(pk.key) : state.picks.add(pk.key);
-      syncPressed(pbox, 'pick');
+      sync();
       apply();
     });
     pbox.append(b);
   }
 
   const dbox = $('#difficulty');
+  const any = document.createElement('button');
+  any.type = 'button';
+  any.dataset.diff = '';
+  any.textContent = 'Любая';
+  dbox.append(any);
   for (const r of DIFF_RANGES) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'chip';
     b.dataset.diff = r.key;
-    b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `${r.label}<span class="num">${r.hint}</span>`;
-    b.addEventListener('click', () => {
-      state.diff = state.diff === r.key ? null : r.key;
-      syncPressed(dbox, 'diff');
-      apply();
-    });
+    b.textContent = r.label;
     dbox.append(b);
   }
+  dbox.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state.diff = b.dataset.diff || null;
+    sync();
+    apply();
+  });
 
-  const sbox = $('#sort');
-  for (const s of SORTS) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'chip';
-    b.dataset.sort = s.key;
-    b.setAttribute('aria-pressed', String(state.sort === s.key));
-    b.textContent = s.label;
-    b.addEventListener('click', () => {
-      state.sort = s.key;
-      syncPressed(sbox, 'sort');
-      apply();
-    });
-    sbox.append(b);
-  }
+  const sel = $('#sort');
+  for (const s of SORTS) sel.add(new Option(s.label, s.key));
+  sel.addEventListener('change', () => { state.sort = sel.value; apply(); });
 }
 
-function syncPressed(box, kind) {
-  for (const b of box.querySelectorAll('.chip')) {
-    const v = kind === 'section' ? (b.dataset.section || null) : b.dataset[kind];
-    const on = kind === 'pick' ? state.picks.has(v)
-      : kind === 'sort' ? state.sort === v : state[kind] === v;
-    b.setAttribute('aria-pressed', String(on));
+// reflect state on every control in one place, so no control can drift out of sync
+function sync() {
+  for (const b of document.querySelectorAll('#sections .tab')) {
+    b.setAttribute('aria-pressed', String((b.dataset.section || null) === state.section));
   }
+  for (const b of document.querySelectorAll('#picks .toggle')) {
+    b.setAttribute('aria-pressed', String(state.picks.has(b.dataset.pick)));
+  }
+  for (const b of document.querySelectorAll('#difficulty button')) {
+    b.setAttribute('aria-pressed', String((b.dataset.diff || null) === state.diff));
+  }
+  $('#sort').value = state.sort;
+  $('#q').value = state.q;
 }
 
 // ==========================
-// ===      Отрисовка     ===
+// ===      Rendering     ===
 // ==========================
 
 function apply() {
-  const q = state.q.trim().toLowerCase();
-  const words = q ? q.split(/\s+/) : [];
+  const words = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const range = DIFF_RANGES.find(r => r.key === state.diff);
   const picks = PICKS.filter(pk => state.picks.has(pk.key));
 
   state.view = state.all.filter(it => {
     if (state.section && it.section !== state.section) return false;
-    if (range && !range.test(it.diff === undefined ? null : it.diff)) return false;
+    if (range && !range.test(it.diff ?? null)) return false;
     for (const pk of picks) if (!pk.test(it)) return false;
     for (const w of words) if (!it.hay.includes(w)) return false;
     return true;
@@ -168,16 +181,18 @@ function apply() {
     // undated ideas sink to the bottom instead of floating above everything
     new: (a, b) => (b.date || '').localeCompare(a.date || '') || a.i - b.i,
     default: (a, b) => a.i - b.i,
-  }[state.sort];
+  }[state.sort] || ((a, b) => a.i - b.i);
   state.view.sort(by);
 
   grid.textContent = '';
+  grid.removeAttribute('aria-busy');
   state.shown = 0;
   renderMore();
 
-  $('#empty').hidden = state.view.length > 0;
-  $('#counter').innerHTML = `<b>${state.view.length}</b> ${plural(state.view.length, 'идея', 'идеи', 'идей')}`
-    + (state.view.length !== state.all.length ? ` из ${state.all.length}` : '');
+  const n = state.view.length;
+  $('#empty').hidden = n > 0;
+  $('#counter').innerHTML = `<b>${n}</b> ${plural(n, 'идея', 'идеи', 'идей')}`
+    + (n !== state.all.length ? ` из ${state.all.length}` : '');
   $('#reset').hidden = !(state.q || state.section || state.diff || state.picks.size || state.sort !== 'default');
   $('#clear-q').hidden = !state.q;
   writeHash();
@@ -187,113 +202,115 @@ function renderMore() {
   const slice = state.view.slice(state.shown, state.shown + PAGE);
   if (!slice.length) return;
   const frag = document.createDocumentFragment();
-  const fresh = [];
-  for (const it of slice) {
-    const el = card(it);
-    fresh.push(el);
-    frag.append(el);
-  }
+  slice.forEach((it, k) => frag.append(tile(it, k)));
   grid.append(frag);
   state.shown += slice.length;
-  // обрезку видно только после вставки в документ
-  for (const el of fresh) {
-    const p = el.querySelector('p');
-    if (p && p.scrollHeight > p.clientHeight + 4) el.classList.add('clamped');
-  }
 }
 
-grid.addEventListener('click', e => {
-  if (e.target.closest('a, video')) return;
-  const el = e.target.closest('.card.clamped');
-  if (el) el.classList.toggle('open');
-});
-
-function card(it) {
+function tile(it, k) {
   const el = document.createElement('article');
-  el.className = it.fav ? 'card fav' : 'card';
+  el.className = 'tile';
   el.id = 'i' + it.i;
+  el.style.setProperty('--k', k);
 
-  const top = document.createElement('div');
-  top.className = 'card-top';
+  el.append(thumb(it));
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.innerHTML = (it.fav ? `<span class="fav" title="Избранное">${icon('star-fill')}</span>` : '')
+    + `<span class="sec">${esc(it.section)}</span>`
+    + (it.diff != null ? `<span class="diff" title="Сложность повторения из 10"><b>${it.diff}</b>/10</span>` : '');
+  el.append(meta);
 
   const h = document.createElement('h2');
-  h.innerHTML = highlight(it.title);
-  top.append(h);
-  if (it.diff !== null && it.diff !== undefined) top.append(diffBadge(it.diff));
-  el.append(top);
+  h.innerHTML = it.link
+    ? `<a href="${esc(it.link)}" target="_blank" rel="noopener">${highlight(it.title)}</a>`
+    : highlight(it.title);
+  el.append(h);
 
   if (it.desc) {
     const p = document.createElement('p');
+    p.className = 'desc';
     p.innerHTML = highlight(it.desc);
+    p.addEventListener('click', () => el.classList.toggle('open'));
     el.append(p);
   }
-
-  if (it.video) {
-    const v = document.createElement('video');
-    v.src = it.video;
-    v.controls = true;
-    v.preload = 'metadata';   // первый кадр вместо чёрного прямоугольника
-    v.playsInline = true;
-    el.append(v);
-  } else if (it.image) {
-    const img = document.createElement('img');
-    img.className = 'shot';
-    img.src = it.image;
-    img.alt = '';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    el.append(img);
-  }
-
-  const foot = document.createElement('div');
-  foot.className = 'card-foot';
-  if (it.fav) {
-    const star = document.createElement('span');
-    star.className = 'tag tag-fav';
-    star.textContent = '★ Избранное';
-    foot.append(star);
-  }
-  const tag = document.createElement('span');
-  tag.className = 'tag';
-  tag.textContent = it.section;
-  foot.append(tag);
-  for (const t of (it.tags || []).slice(0, 2)) {
-    const s = document.createElement('span');
-    s.className = 'tag';
-    s.textContent = t;
-    foot.append(s);
-  }
-  if (it.link) {
-    const a = document.createElement('a');
-    a.className = 'src';
-    a.href = it.link;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.textContent = 'Посмотреть →';
-    foot.append(a);
-  }
-  el.append(foot);
   return el;
 }
 
-function diffBadge(d) {
-  const box = document.createElement('div');
-  const cls = d <= 2 ? 'd-easy' : d <= 5 ? 'd-mid' : d <= 8 ? 'd-hard' : 'd-crazy';
-  const word = d <= 2 ? 'просто' : d <= 5 ? 'средне' : d <= 8 ? 'сложно' : 'жесть';
-  box.className = 'diff ' + cls;
-  box.title = `Сложность повторения: ${d} из 10`;
-  box.innerHTML = `<span class="diff-num">${d}</span>`
-    + `<span class="diff-bar"><i style="width:${d * 10}%"></i></span>`
-    + `<span class="diff-word">${word}</span>`;
-  return box;
+// the picture decides what pressing it does: play a clip, open the video, or nothing
+function thumb(it) {
+  const still = it.poster || it.image;
+  if (it.video) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'thumb';
+    b.setAttribute('aria-label', 'Смотреть ролик: ' + it.title);
+    b.innerHTML = (still ? `<img src="${esc(still)}" alt="" loading="lazy" decoding="async">` : '')
+      + `<span class="play">${icon('play')}</span>`;
+    b.addEventListener('click', () => {
+      const v = document.createElement('video');
+      v.src = it.video;
+      if (still) v.poster = still;
+      v.controls = true;
+      v.autoplay = true;
+      v.playsInline = true;
+      const box = document.createElement('div');
+      box.className = 'thumb bare';
+      box.append(v);
+      b.replaceWith(box);
+    }, { once: true });
+    return b;
+  }
+  if (it.yt) {
+    const a = document.createElement('a');
+    a.className = 'thumb';
+    a.href = it.link;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.setAttribute('aria-label', 'Открыть видео: ' + it.title);
+    const img = new Image();
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    ytStill(img, it.yt);
+    a.append(img);
+    a.insertAdjacentHTML('beforeend', `<span class="play">${icon('out')}</span>`);
+    return a;
+  }
+  const d = document.createElement('div');
+  d.className = still ? 'thumb bare' : 'thumb empty';
+  d.innerHTML = still ? `<img src="${esc(still)}" alt="" loading="lazy" decoding="async">` : 'без кадра';
+  return d;
+}
+
+function el(it) { return document.getElementById('i' + it.i); }
+
+// a still that fails to load leaves the plain frame instead of a broken-image glyph
+grid.addEventListener('error', e => {
+  if (e.target.tagName === 'IMG' && !e.target.dataset.yt) e.target.remove();
+}, true);
+
+function ytStill(img, id) {
+  img.dataset.yt = id;   // has its own fallback chain, the generic handler must not remove it
+  let step = 0;
+  const next = () => {
+    if (step < YT_SIZES.length) img.src = `https://i.ytimg.com/vi/${id}/${YT_SIZES[step++]}.jpg`;
+  };
+  img.addEventListener('error', next);
+  // a missing size comes back as a 120px grey stub rather than an error
+  img.addEventListener('load', () => { if (img.naturalWidth <= 120) next(); });
+  next();
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 function highlight(text) {
-  const safe = text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  const q = state.q.trim();
-  if (!q) return safe;
-  const words = q.split(/\s+/).filter(w => w.length > 1)
-    .map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const safe = esc(text);
+  const words = state.q.trim().split(/\s+/).filter(w => w.length > 1)
+    .map(w => esc(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   if (!words.length) return safe;
   return safe.replace(new RegExp('(' + words.join('|') + ')', 'gi'), '<mark>$1</mark>');
 }
@@ -306,7 +323,7 @@ function plural(n, one, few, many) {
 }
 
 // ==========================
-// ===      События       ===
+// ===       Events       ===
 // ==========================
 
 let timer = null;
@@ -317,38 +334,33 @@ $('#q').addEventListener('input', e => {
 });
 
 $('#clear-q').addEventListener('click', () => {
-  $('#q').value = '';
   state.q = '';
+  sync();
   apply();
   $('#q').focus();
 });
 
 $('#reset').addEventListener('click', () => {
-  state.q = ''; state.section = null; state.diff = null; state.sort = 'default';
+  Object.assign(state, { q: '', section: null, diff: null, sort: 'default' });
   state.picks.clear();
-  $('#q').value = '';
-  syncPressed($('#picks'), 'pick');
-  syncPressed($('#sections'), 'section');
-  syncPressed($('#difficulty'), 'diff');
-  syncPressed($('#sort'), 'sort');
+  sync();
   apply();
 });
 
 $('#lucky').addEventListener('click', () => {
   if (!state.view.length) return;
-  const pick = state.view[Math.floor(Math.random() * state.view.length)];
-  const idx = state.view.indexOf(pick);
+  const idx = Math.floor(Math.random() * state.view.length);
   while (state.shown <= idx) renderMore();
-  const el = document.getElementById('i' + pick.i);
-  if (!el) return;
-  el.scrollIntoView({ block: 'center' });
-  el.classList.add('flash');
-  setTimeout(() => el.classList.remove('flash'), 1600);
+  const node = el(state.view[idx]);
+  if (!node) return;
+  node.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  node.classList.add('flash');
+  setTimeout(() => node.classList.remove('flash'), 1800);
 });
 
 new IntersectionObserver(entries => {
   if (entries.some(e => e.isIntersecting)) renderMore();
-}, { rootMargin: '600px' }).observe($('#sentinel'));
+}, { rootMargin: '800px' }).observe($('#sentinel'));
 
 document.addEventListener('keydown', e => {
   if (e.key === '/' && document.activeElement !== $('#q')) {
@@ -359,7 +371,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ==========================
-// ===  Состояние в URL   ===
+// ===   State in the URL ===
 // ==========================
 
 function writeHash() {
@@ -375,15 +387,11 @@ function writeHash() {
 
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
+  const known = new Set(PICKS.map(pk => pk.key));
   state.q = p.get('q') || '';
   state.section = p.get('r');
-  state.diff = p.get('d');
-  state.sort = p.get('s') || 'default';
-  const known = new Set(PICKS.map(pk => pk.key));
+  state.diff = DIFF_RANGES.some(r => r.key === p.get('d')) ? p.get('d') : null;
+  state.sort = SORTS.some(s => s.key === p.get('s')) ? p.get('s') : 'default';
   state.picks = new Set((p.get('p') || '').split(',').filter(k => known.has(k)));
-  $('#q').value = state.q;
-  syncPressed($('#picks'), 'pick');
-  syncPressed($('#sections'), 'section');
-  syncPressed($('#difficulty'), 'diff');
-  syncPressed($('#sort'), 'sort');
+  sync();
 }

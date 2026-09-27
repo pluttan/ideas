@@ -53,6 +53,22 @@ def load(path: pathlib.Path) -> list[dict]:
 YT = re.compile(r"(?:youtu\.be/|youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/))([\w-]{6,})")
 
 
+CLIPS = "https://pluttan.github.io/ideas-clips/"
+
+
+def poster_for(video: str) -> str:
+    """Still frame shown before a clip plays and as the grid thumbnail.
+
+    Posters follow the clip's name: ideas-clips/tg/X.mp4 -> ideas-clips/poster/X.jpg,
+    assets/video/X.mp4 -> assets/poster/X.jpg (made by `make posters`).
+    """
+    if video.startswith(CLIPS + "tg/"):
+        return CLIPS + "poster/" + video[len(CLIPS + "tg/"):].rsplit(".", 1)[0] + ".jpg"
+    if video.startswith("assets/video/"):
+        return "assets/poster/" + video[len("assets/video/"):].rsplit(".", 1)[0] + ".jpg"
+    return ""
+
+
 def youtube_id(link: str) -> str:
     """id ролика — лента крутит его прямо в слайде, а не только ссылкой."""
     m = YT.search(link or "")
@@ -75,6 +91,7 @@ def clean(raw: list[dict]) -> list[dict]:
             "tags": [t.strip() for t in (it.get("tags") or []) if t.strip()][:3],
             "link": link,
             "video": (it.get("video") or "").strip(),
+            "poster": poster_for((it.get("video") or "").strip()),
             "image": (it.get("image") or "").strip(),   # кадр для идей, у которых нет ни ролика, ни ютуба
             "yt": youtube_id(link),
             "fav": bool(it.get("fav")),                   # saved to the vault by hand

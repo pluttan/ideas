@@ -17,6 +17,8 @@
     make check    # проверить каталог
     make serve    # поднять локально на http://localhost:8777
     make deploy   # опубликовать на GitHub Pages
+    make posters  # кадры для своих роликов из assets/video (нужен ffmpeg)
+    make icons    # пересобрать спрайт иконок assets/icons.svg
 
 Путь к исходной выгрузке задаётся переменной `SRC`.
 

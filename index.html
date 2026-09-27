@@ -3,74 +3,73 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Каталог идей — что можно смастерить</title>
+<title>Каталог идей: что можно смастерить</title>
 <meta name="description" content="Справочник самодельных проектов: что можно собрать своими руками, зачем это нужно и насколько сложно повторить.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#11111b">
+<link rel="preload" href="assets/fonts/geist-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/base.css">
 <link rel="stylesheet" href="assets/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128161;</text></svg>">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap top-inner">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <div>
-        <h1>Каталог идей</h1>
-        <p class="tagline">Что можно смастерить своими руками и зачем оно нужно</p>
-      </div>
-    </div>
-    <div class="counter" id="counter" aria-live="polite"></div>
+<header class="head wrap">
+  <div class="head-text">
+    <h1>Каталог идей</h1>
+    <p class="lede">Самоделки, которые хочется повторить: что это, зачем и насколько сложно.</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-primary" href="feed.html">
+      <svg class="i" aria-hidden="true"><use href="assets/icons.svg#play"/></svg>Лента
+    </a>
+    <button type="button" id="lucky" class="btn">
+      <svg class="i" aria-hidden="true"><use href="assets/icons.svg#shuffle"/></svg>Случайная
+    </button>
   </div>
 </header>
 
-<div class="controls">
-  <div class="wrap">
-    <div class="search-row">
-      <div class="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-        <input type="search" id="q" placeholder="Искать идею — «часы», «подсветка», «стол»…" autocomplete="off" spellcheck="false">
-        <button type="button" id="clear-q" class="clear" title="Очистить" hidden>&times;</button>
-      </div>
-      <a class="lucky feed-link" href="feed.html">Листать лентой</a>
-      <button type="button" id="lucky" class="lucky">Случайная идея</button>
-    </div>
+<div class="bar">
+  <div class="wrap bar-inner">
+    <label class="search">
+      <svg class="i" aria-hidden="true"><use href="assets/icons.svg#search"/></svg>
+      <span class="sr">Поиск</span>
+      <input type="search" id="q" placeholder="Часы, подсветка, стол" autocomplete="off" spellcheck="false">
+      <button type="button" id="clear-q" class="clear" hidden>
+        <svg class="i" aria-hidden="true"><use href="assets/icons.svg#close"/></svg><span class="sr">Очистить</span>
+      </button>
+    </label>
 
-    <nav class="sections" id="sections" aria-label="Разделы"></nav>
-
-    <div class="filters">
-      <div class="filter-group" role="group" aria-label="Подборка">
-        <span class="filter-label">Подборка</span>
-        <div class="chips" id="picks"></div>
-      </div>
-      <div class="filter-group" role="group" aria-label="Сложность">
-        <span class="filter-label">Сложность</span>
-        <div class="chips" id="difficulty"></div>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">Порядок</span>
-        <div class="chips" id="sort"></div>
-      </div>
-      <button type="button" id="reset" class="reset" hidden>Сбросить всё</button>
+    <div class="controls">
+      <div class="toggles" id="picks" role="group" aria-label="Подборка"></div>
+      <div class="seg" id="difficulty" role="group" aria-label="Сложность"></div>
+      <label class="select">
+        <span class="sr">Порядок</span>
+        <select id="sort"></select>
+        <svg class="i" aria-hidden="true"><use href="assets/icons.svg#caret"/></svg>
+      </label>
     </div>
   </div>
+
+  <nav class="wrap tabs" id="sections" aria-label="Разделы"></nav>
 </div>
 
 <main class="wrap">
+  <div class="status">
+    <p class="count" id="counter" aria-live="polite"></p>
+    <button type="button" id="reset" class="link" hidden>Сбросить фильтры</button>
+  </div>
+
   <div id="empty" class="empty" hidden>
     <p class="empty-title">Ничего не нашлось</p>
     <p>Попробуй другое слово или сбрось фильтры.</p>
   </div>
-  <div id="grid" class="grid"></div>
+
+  <div id="grid" class="grid" aria-busy="true"></div>
   <div id="sentinel" class="sentinel"></div>
 </main>
 
-<footer class="foot">
-  <div class="wrap">
-    <p>Личная подборка идей для повторения. Сложность — субъективная оценка того, насколько тяжело сделать это дома.</p>
-  </div>
+<footer class="foot wrap">
+  <p>Личная подборка идей для повторения. Сложность от 0 до 10: насколько тяжело сделать это дома.</p>
 </footer>
 
 <script src="assets/app.js"></script>

@@ -9,21 +9,14 @@ const AHEAD = 8;           // всегда держим столько гото�
 const KEEP_BEHIND = 6;     // столько позади оставляем, остальное снимаем
 const MAX_ALIVE = 40;      // потолок живых слайдов в документе
 
-// пары оттенков подложки — видны только там, где кадра нет
-const TINTS = [
-  ['rgba(203,166,247,.30)', 'rgba(137,180,250,.22)'],
-  ['rgba(137,180,250,.28)', 'rgba(148,226,213,.20)'],
-  ['rgba(166,227,161,.24)', 'rgba(249,226,175,.18)'],
-  ['rgba(250,179,135,.26)', 'rgba(243,139,168,.20)'],
-  ['rgba(243,139,168,.26)', 'rgba(203,166,247,.20)'],
-  ['rgba(148,226,213,.26)', 'rgba(116,199,236,.20)'],
-  ['rgba(249,226,175,.24)', 'rgba(250,179,135,.20)'],
-  ['rgba(116,199,236,.26)', 'rgba(203,166,247,.18)'],
-];
-
 const state = { all: [], view: [], built: 0, section: null, fav: false, current: 0, sound: false };
 
 const $ = s => document.querySelector(s);
+const ICONS = 'assets/icons.svg';
+const icon = id => `<svg class="i" aria-hidden="true"><use href="${ICONS}#${id}"/></svg>`;
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const blank = (title, text) =>
+  `<section class="slide blank"><div class="cap"><h2>${title}</h2><p>${text}</p></div></section>`;
 const feed = $('#feed');
 
 // ==========================
@@ -42,8 +35,7 @@ fetch('data/ideas.json')
     apply();
   })
   .catch(() => {
-    feed.innerHTML = '<section class="slide"><div class="body"><h2>Лента не загрузилась</h2>'
-      + '<p>Обнови страницу — данные не доехали.</p></div></section>';
+    feed.innerHTML = blank('Лента не загрузилась', 'Обнови страницу: данные не доехали.');
   });
 
 // тасуем, чтобы каждый заход давал другой порядок
@@ -67,11 +59,10 @@ function apply() {
   grow(BATCH);
   feed.scrollTo({ top: 0 });
   if (feed.firstElementChild) activate(feed.firstElementChild);
-  else feed.innerHTML = '<section class="slide"><div class="body"><h2>Здесь пусто</h2>'
-    + '<p>В этом разделе нет избранных идей — выбери другой раздел или сними «Избранное».</p></div></section>';
-  $('#pick').textContent = state.fav
-    ? (state.section ? '★ ' + state.section : '★ Избранное')
-    : (state.section || 'Все разделы');
+  else feed.innerHTML = blank('Здесь пусто',
+    'В этом разделе нет избранных идей. Выбери другой раздел или сними «Только избранное».');
+  $('#pick-label').textContent = state.section || (state.fav ? 'Избранное' : 'Все разделы');
+  $('#pick').classList.toggle('fav', state.fav);
   updatePos();
   const p = new URLSearchParams();
   if (state.section) p.set('r', state.section);
@@ -131,6 +122,8 @@ function poster(img, id) {
   let step = 0;
   const next = () => {
     if (step >= POSTER_SIZES.length) return;
+    // only maxres is true 16:9; the smaller sizes carry black bars baked into a 4:3 frame
+    img.classList.toggle('lb', step > 0);
     img.src = 'https://i.ytimg.com/vi/' + id + '/' + POSTER_SIZES[step++] + '.jpg';
   };
   img.addEventListener('error', next);
@@ -143,107 +136,60 @@ function slide(it, pos) {
   el.className = 'slide';
   el.dataset.idx = it.i;
   el.dataset.pos = pos;
-  const tint = TINTS[(state.sections.indexOf(it.section) + 8) % TINTS.length];
-  el.style.setProperty('--tint1', tint[0]);
-  el.style.setProperty('--tint2', tint[1]);
 
   if (it.video) {
     const v = document.createElement('video');
     v.src = it.video;
+    if (it.poster) v.poster = it.poster;
     v.muted = true;
     v.loop = true;
     v.playsInline = true;
     v.preload = 'metadata';
     el.append(v);
   } else if (it.image) {
-    const img = document.createElement('img');
-    img.className = 'poster';
-    img.src = it.image;
-    img.alt = '';
-    img.decoding = 'async';
-    el.append(img);
+    el.append(still(it.image));
   } else if (it.yt) {
     el.dataset.yt = it.yt;
-    const img = document.createElement('img');
-    img.className = 'poster';
-    img.alt = '';
-    img.decoding = 'async';
-    img.fetchPriority = pos - state.current < 4 ? 'high' : 'auto';
-    poster(img, it.yt);
-    el.append(img);
     const box = document.createElement('div');
     box.className = 'player';
     el.append(box);
+    const img = still('');
+    img.fetchPriority = pos - state.current < 4 ? 'high' : 'auto';
+    poster(img, it.yt);
+    el.append(img);
   }
 
-  if (it.diff !== null && it.diff !== undefined) {
-    const g = document.createElement('div');
-    const cls = it.diff <= 2 ? 'g-easy' : it.diff <= 5 ? 'g-mid' : it.diff <= 8 ? 'g-hard' : 'g-crazy';
-    const word = it.diff <= 2 ? 'просто' : it.diff <= 5 ? 'средне' : it.diff <= 8 ? 'сложно' : 'жесть';
-    g.className = 'gauge ' + cls;
-    g.innerHTML = `<b>${it.diff}</b><i><u style="width:${it.diff * 10}%"></u></i><span>${word}</span>`;
-    el.append(g);
-  }
+  const cap = document.createElement('div');
+  cap.className = 'cap';
+  cap.innerHTML = `<div class="meta">${it.fav ? icon('star-fill') : ''}<span>${esc(it.section)}</span></div>`
+    + `<h2>${esc(it.title)}</h2>`
+    + (it.desc ? `<p>${esc(it.desc)}</p>` : '');
+  const p = cap.querySelector('p');
+  if (p) p.addEventListener('click', () => el.classList.toggle('open'));
+  el.append(cap);
 
-  const body = document.createElement('div');
-  body.className = 'body';
-
-  const pills = document.createElement('div');
-  pills.className = 'pills';
-  const pill = document.createElement('span');
-  pill.className = 'pill';
-  pill.textContent = it.section;
-  pills.append(pill);
-  if (it.fav) {
-    const star = document.createElement('span');
-    star.className = 'pill pill-fav';
-    star.textContent = '★ Избранное';
-    pills.append(star);
-  }
-  body.append(pills);
-
-  const h = document.createElement('h2');
-  h.textContent = it.title;
-  body.append(h);
-
-  if (it.desc) {
-    const p = document.createElement('p');
-    p.textContent = it.desc;
-    body.append(p);
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'more';
-    more.textContent = 'Читать целиком';
-    more.hidden = true;
-    more.addEventListener('click', () => {
-      el.classList.toggle('open');
-      more.textContent = el.classList.contains('open') ? 'Свернуть' : 'Читать целиком';
-    });
-    body.append(more);
-    requestAnimationFrame(() => { more.hidden = p.scrollHeight <= p.clientHeight + 4; });
-  }
-
-  const row = document.createElement('div');
-  row.className = 'row';
-  for (const t of (it.tags || []).slice(0, 3)) {
-    const s = document.createElement('span');
-    s.className = 'tag';
-    s.textContent = t;
-    row.append(s);
+  const rail = document.createElement('div');
+  rail.className = 'rail';
+  if (it.diff != null) {
+    rail.insertAdjacentHTML('beforeend',
+      `<div class="act" title="Сложность повторения из 10"><span class="diff">${it.diff}</span>из 10</div>`);
   }
   if (it.link) {
-    const a = document.createElement('a');
-    a.className = 'go';
-    a.href = it.link;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.textContent = 'Посмотреть';
-    row.append(a);
+    rail.insertAdjacentHTML('beforeend',
+      `<a class="act" href="${esc(it.link)}" target="_blank" rel="noopener">`
+      + `<span class="round">${icon('out')}</span>Источник</a>`);
   }
-  body.append(row);
-
-  el.append(body);
+  el.append(rail);
   return el;
+}
+
+function still(src) {
+  const img = document.createElement('img');
+  img.className = 'still';
+  img.alt = '';
+  img.decoding = 'async';
+  if (src) img.src = src;
+  return img;
 }
 
 // ==========================
@@ -384,19 +330,15 @@ setTimeout(() => $('#hint').classList.add('gone'), 5000);
 // ==========================
 
 function buildSheet() {
-  // favourites stack with the section choice, so they live in their own row
-  const favBtn = document.createElement('button');
-  favBtn.type = 'button';
-  favBtn.className = 'fav-toggle';
+  const favBtn = $('#fav-toggle');
+  $('#fav-count').textContent = state.all.filter(it => it.fav).length;
   favBtn.setAttribute('aria-pressed', String(state.fav));
-  favBtn.innerHTML = `★ Избранное<span class="num">${state.all.filter(it => it.fav).length}</span>`;
+  // favourites stack with the section choice, so the switch does not close the sheet
   favBtn.addEventListener('click', () => {
     state.fav = !state.fav;
     favBtn.setAttribute('aria-pressed', String(state.fav));
-    closeSheet();
     apply();
   });
-  $('#sheet-picks').append(favBtn);
 
   const box = $('#sheet-list');
   const counts = new Map();
@@ -405,11 +347,12 @@ function buildSheet() {
   const mk = (name, label, n) => {
     const b = document.createElement('button');
     b.type = 'button';
+    b.className = 'row';
     b.setAttribute('aria-pressed', String(state.section === name));
-    b.innerHTML = `${label}<span class="num">${n}</span>`;
+    b.innerHTML = `<span>${esc(label)}</span><span class="n">${n}</span>`;
     b.addEventListener('click', () => {
       state.section = name;
-      for (const other of box.querySelectorAll('button')) other.setAttribute('aria-pressed', 'false');
+      for (const other of box.querySelectorAll('.row')) other.setAttribute('aria-pressed', 'false');
       b.setAttribute('aria-pressed', 'true');
       closeSheet();
       apply();
@@ -418,7 +361,7 @@ function buildSheet() {
   };
 
   box.append(mk(null, 'Все разделы', state.all.length));
-  for (const s of state.sections) if (counts.get(s)) box.append(mk(s, s, counts.get(s)));
+  for (const sec of state.sections) if (counts.get(sec)) box.append(mk(sec, sec, counts.get(sec)));
 }
 
 function openSheet() { $('#sheet').hidden = false; }
@@ -427,7 +370,7 @@ function closeSheet() { $('#sheet').hidden = true; }
 $('#sound').addEventListener('click', () => {
   state.sound = !state.sound;
   $('#sound').setAttribute('aria-pressed', String(state.sound));
-  $('#sound').textContent = state.sound ? 'Звук вкл' : 'Звук выкл';
+  $('#sound-icon').setAttribute('href', `${ICONS}#${state.sound ? 'sound' : 'mute'}`);
   for (const el of feed.children) {
     const v = el.querySelector('video');
     const active = +el.dataset.pos === state.current;
