@@ -138,11 +138,13 @@ function poster(img, id) {
 
 // How far the media's shape may differ from the screen's before we stop filling
 // the screen with it: a landscape clip on a phone is shown whole over a blurred copy.
-const FIT_LIMIT = 1.25;
-// The youtube player is rendered large and scaled down: its title bar and logo are
-// sized in fixed pixels, so at 1280 wide they shrink to a thin rim that this extra
-// zoom pushes off the edge, without waiting for them to fade.
-const YT_W = 1280, YT_H = 720, YT_TRIM = 1.2;   // title bar is ~8% of 720, 1.2 trims 8.3% per edge
+const FIT_LIMIT = 1.08;   // only near-identical shapes may fill the screen
+// The youtube player is rendered at 1280x720 and scaled to the box. Its title bar
+// (top) and logo (bottom) are overlays of fixed height, so only those two strips
+// are hidden; the sides of the picture are never cut.
+const YT_W = 1280, YT_H = 720;
+const YT_TOP = 0.085, YT_BOT = 0.06;       // share of the 720px player height
+const YT_KEEP = 1 - YT_TOP - YT_BOT;
 
 function setAspect(el, ar) {
   if (!ar || !isFinite(ar)) return;
@@ -162,11 +164,16 @@ function fit(el) {
 function sizePlayer(el) {
   const box = el.querySelector('.player');
   if (!box || !box.clientWidth) return;
-  const tall = +el.dataset.ar < 1;
+  const tall = el.dataset.short === '1';
   const iw = tall ? YT_H : YT_W, ih = tall ? YT_W : YT_H;
+  const bw = box.clientWidth, bh = box.clientHeight;
+  // cover the box with the part of the player between the two strips
+  const k = Math.max(bw / iw, bh / (ih * YT_KEEP));
   box.style.setProperty('--iw', iw + 'px');
   box.style.setProperty('--ih', ih + 'px');
-  box.style.setProperty('--k', Math.max(box.clientWidth / iw, box.clientHeight / ih) * YT_TRIM);
+  box.style.setProperty('--k', k);
+  box.style.setProperty('--l', (bw - iw * k) / 2 + 'px');
+  box.style.setProperty('--t', (bh - ih * k * YT_KEEP) / 2 - YT_TOP * ih * k + 'px');
 }
 
 addEventListener('resize', () => { for (const el of feed.children) fit(el); });
@@ -207,7 +214,10 @@ function slide(it, pos) {
     img.addEventListener('load', () => setAspect(el, img.naturalWidth / img.naturalHeight), { once: true });
     el.append(backdrop(it.image), img);
   } else if (it.yt) {
-    setAspect(el, /shorts\//.test(it.link) ? 9 / 16 : 16 / 9);
+    const short = /shorts\//.test(it.link);
+    if (short) el.dataset.short = '1';
+    // the box shows the player minus youtube's strips, so its shape is a bit wider
+    setAspect(el, (short ? 9 / 16 : 16 / 9) / YT_KEEP);
     el.append(backdrop(`https://i.ytimg.com/vi/${it.yt}/hqdefault.jpg`));
     el.dataset.yt = it.yt;
     const box = document.createElement('div');
@@ -281,7 +291,7 @@ function startPlayer(el, playNow) {
   box.append(host);
   sizePlayer(el);
   el._wantPlay = !!playNow;
-  const tall = +el.dataset.ar < 1;
+  const tall = el.dataset.short === '1';
   el._player = new YT.Player(host, {
     videoId: id,
     width: tall ? YT_H : YT_W,
