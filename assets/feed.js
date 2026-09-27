@@ -9,7 +9,7 @@ const AHEAD = 8;           // всегда держим столько гото�
 const KEEP_BEHIND = 6;     // столько позади оставляем, остальное снимаем
 const MAX_ALIVE = 40;      // потолок живых слайдов в документе
 
-const state = { all: [], view: [], built: 0, section: null, fav: false, current: 0, sound: false };
+const state = { all: [], view: [], built: 0, section: null, fav: true, current: 0, sound: false };
 
 const $ = s => document.querySelector(s);
 const ICONS = 'assets/icons.svg';
@@ -30,7 +30,8 @@ fetch('data/ideas.json')
     state.all = data.ideas.map((it, i) => ({ ...it, i }));
     const h = new URLSearchParams(location.hash.slice(1));
     state.section = h.get('r');
-    state.fav = h.get('f') === '1';
+    // the feed opens on favourites; only an explicit f=0 shows everything
+    state.fav = h.get('f') !== '0';
     buildSheet();
     apply();
   })
@@ -66,7 +67,7 @@ function apply() {
   updatePos();
   const p = new URLSearchParams();
   if (state.section) p.set('r', state.section);
-  if (state.fav) p.set('f', '1');
+  if (!state.fav) p.set('f', '0');
   history.replaceState(null, '', p.toString() ? '#' + p : location.pathname);
 }
 
