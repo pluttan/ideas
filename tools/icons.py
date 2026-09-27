@@ -26,6 +26,7 @@ ICONS = {
     "out": ("regular", "arrow-up-right"),
     "caret": ("regular", "caret-down"),
     "filters": ("regular", "sliders-horizontal"),
+    "image": ("regular", "image"),
 }
 
 

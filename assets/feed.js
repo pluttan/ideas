@@ -204,6 +204,8 @@ function slide(it, pos) {
       el.append(bg);
     }
     v.addEventListener('loadedmetadata', () => setAspect(el, v.videoWidth / v.videoHeight), { once: true });
+    v.addEventListener('playing', () => { el.dataset.live = '1'; showStatus(); });
+    v.addEventListener('waiting', () => { el.dataset.live = '0'; showStatus(); });
     v.muted = true;
     v.loop = true;
     v.playsInline = true;
@@ -227,6 +229,10 @@ function slide(it, pos) {
     img.fetchPriority = pos - state.current < 4 ? 'high' : 'auto';
     poster(img, it.yt);
     el.append(img);
+  }
+
+  if (!it.video && !it.image && !it.yt) {
+    el.insertAdjacentHTML('beforeend', `<div class="none">${icon('image')}<span>Кадра нет</span></div>`);
   }
 
   const cap = document.createElement('div');
@@ -307,12 +313,14 @@ function startPlayer(el, playNow) {
         if (el._wantPlay) e.target.playVideo();
       },
       onStateChange: e => {
+        el.dataset.buf = e.data === YT.PlayerState.BUFFERING ? '1' : '0';
+        if (e.data !== YT.PlayerState.PLAYING) showStatus();
         if (e.data !== YT.PlayerState.PLAYING) return;
         clearTimeout(el._t);
         // chrome is already trimmed off; the short delay only skips the first black frame
-        el._t = setTimeout(() => el.classList.add('playing'), 200);
+        el._t = setTimeout(() => { el.classList.add('playing'); showStatus(); }, 200);
       },
-      onError: () => el.classList.remove('playing'),
+      onError: () => { el.classList.remove('playing'); el.dataset.dead = '1'; showStatus(); },
     },
   });
 }
@@ -347,12 +355,62 @@ function activate(el) {
   const v = el.querySelector('video');
   if (v) { v.muted = !state.sound; v.play().catch(() => {}); }
   startPlayer(el, true);
+  watchStuck(el);
+  showStatus();
   const next = el.nextElementSibling;
   if (next) {
     startPlayer(next, false);              // сосед заряжен и ждёт на паузе
     const nv = next.querySelector('video');
     if (nv) nv.preload = 'auto';
   }
+}
+
+// ==========================
+// ===    Media status    ===
+// ==========================
+
+// The sound button doubles as the indicator of what the slide on screen has:
+// a spinning ring while its clip loads, a photo glyph when there is only a picture.
+const STUCK_MS = 8000;   // autoplay refused or a dead link: stop spinning, it is a picture now
+let stuckTimer = 0;
+
+function current() {
+  for (const k of feed.children) if (+k.dataset.pos === state.current) return k;
+  return null;
+}
+
+function mediaState(el) {
+  if (!el) return 'none';
+  if (el.querySelector('video')) {
+    if (el.dataset.live === '1') return 'sound';
+    return el.dataset.stuck === '1' ? 'photo' : 'loading';
+  }
+  if (el.dataset.yt) {
+    if (el.dataset.dead === '1') return 'photo';
+    if (el.classList.contains('playing') && el.dataset.buf !== '1') return 'sound';
+    return el.dataset.stuck === '1' ? 'photo' : 'loading';
+  }
+  return el.querySelector('.still') ? 'photo' : 'none';
+}
+
+function showStatus() {
+  const st = mediaState(current());
+  const b = $('#sound');
+  const quiet = st === 'photo' || st === 'none';
+  b.dataset.state = st;
+  b.disabled = quiet;
+  $('#sound-icon').setAttribute('href', `${ICONS}#${quiet ? 'image' : state.sound ? 'sound' : 'mute'}`);
+  b.title = st === 'loading' ? 'Видео загружается'
+    : st === 'photo' ? 'Только картинка, звука нет'
+    : st === 'none' ? 'Ни видео, ни картинки' : 'Звук';
+}
+
+function watchStuck(el) {
+  clearTimeout(stuckTimer);
+  el.dataset.stuck = '0';
+  stuckTimer = setTimeout(() => {
+    if (mediaState(el) === 'loading') { el.dataset.stuck = '1'; showStatus(); }
+  }, STUCK_MS);
 }
 
 function onScroll() {
@@ -445,7 +503,7 @@ function closeSheet() { $('#sheet').hidden = true; }
 $('#sound').addEventListener('click', () => {
   state.sound = !state.sound;
   $('#sound').setAttribute('aria-pressed', String(state.sound));
-  $('#sound-icon').setAttribute('href', `${ICONS}#${state.sound ? 'sound' : 'mute'}`);
+  showStatus();
   for (const el of feed.children) {
     const v = el.querySelector('video');
     const active = +el.dataset.pos === state.current;

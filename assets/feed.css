@@ -32,6 +32,7 @@ html, body { height: 100%; overflow: hidden; background: var(--crust); }
 }
 
 .round {
+  position: relative;
   display: grid;
   place-items: center;
   width: 40px;
@@ -42,6 +43,20 @@ html, body { height: 100%; overflow: hidden; background: var(--crust); }
 .round:hover { background: rgba(49, 50, 68, .8); }
 .round:active { transform: scale(.94); }
 .round[aria-pressed="true"] { color: var(--accent); }
+.round:disabled { cursor: default; color: var(--subtext0); }
+.round:disabled:active { transform: none; }
+
+/* the clip on screen is still loading: a ring runs around the sound button */
+#sound[data-state="loading"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(1turn); } }
 
 .pick {
   display: inline-flex;
@@ -368,6 +383,19 @@ video::-webkit-media-controls { display: none !important; }
 
 .blank .cap { right: 18px; }
 
+/* idea with neither clip nor picture */
+.none {
+  position: absolute;
+  inset: 0 0 34% 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: var(--surface2);
+  font-size: 14px;
+}
+.none .i { width: 56px; height: 56px; }
+
 @media (min-width: 900px) {
   .cap { left: max(28px, 50% - 460px); bottom: 44px; }
   .cap p { font-size: 16px; }
@@ -377,4 +405,5 @@ video::-webkit-media-controls { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .sheet, .sheet-card { animation: none; }
   .still, .knob, .knob::after, .round { transition: none; }
+  #sound[data-state="loading"]::after { animation-duration: 2.4s; }
 }
