@@ -132,6 +132,54 @@ function poster(img, id) {
   next();
 }
 
+// ==========================
+// ===    Media fitting   ===
+// ==========================
+
+// How far the media's shape may differ from the screen's before we stop filling
+// the screen with it: a landscape clip on a phone is shown whole over a blurred copy.
+const FIT_LIMIT = 1.25;
+// The youtube player is rendered large and scaled down: its title bar and logo are
+// sized in fixed pixels, so at 1280 wide they shrink to a thin rim that this extra
+// zoom pushes off the edge, without waiting for them to fade.
+const YT_W = 1280, YT_H = 720, YT_TRIM = 1.2;   // title bar is ~8% of 720, 1.2 trims 8.3% per edge
+
+function setAspect(el, ar) {
+  if (!ar || !isFinite(ar)) return;
+  el.dataset.ar = ar;
+  el.style.setProperty('--ar', ar);
+  fit(el);
+}
+
+function fit(el) {
+  const ar = +el.dataset.ar;
+  if (!ar) return;
+  const sar = (feed.clientWidth || innerWidth) / (feed.clientHeight || innerHeight);
+  el.classList.toggle('fit', Math.max(ar / sar, sar / ar) > FIT_LIMIT);
+  sizePlayer(el);
+}
+
+function sizePlayer(el) {
+  const box = el.querySelector('.player');
+  if (!box || !box.clientWidth) return;
+  const tall = +el.dataset.ar < 1;
+  const iw = tall ? YT_H : YT_W, ih = tall ? YT_W : YT_H;
+  box.style.setProperty('--iw', iw + 'px');
+  box.style.setProperty('--ih', ih + 'px');
+  box.style.setProperty('--k', Math.max(box.clientWidth / iw, box.clientHeight / ih) * YT_TRIM);
+}
+
+addEventListener('resize', () => { for (const el of feed.children) fit(el); });
+
+function backdrop(src) {
+  const img = document.createElement('img');
+  img.className = 'bg';
+  img.alt = '';
+  img.decoding = 'async';
+  img.src = src;
+  return img;
+}
+
 function slide(it, pos) {
   const el = document.createElement('section');
   el.className = 'slide';
@@ -141,15 +189,26 @@ function slide(it, pos) {
   if (it.video) {
     const v = document.createElement('video');
     v.src = it.video;
-    if (it.poster) v.poster = it.poster;
+    if (it.poster) {
+      v.poster = it.poster;
+      // the poster has the clip's shape and arrives long before the clip's metadata
+      const bg = backdrop(it.poster);
+      bg.addEventListener('load', () => setAspect(el, bg.naturalWidth / bg.naturalHeight), { once: true });
+      el.append(bg);
+    }
+    v.addEventListener('loadedmetadata', () => setAspect(el, v.videoWidth / v.videoHeight), { once: true });
     v.muted = true;
     v.loop = true;
     v.playsInline = true;
     v.preload = 'metadata';
     el.append(v);
   } else if (it.image) {
-    el.append(still(it.image));
+    const img = still(it.image);
+    img.addEventListener('load', () => setAspect(el, img.naturalWidth / img.naturalHeight), { once: true });
+    el.append(backdrop(it.image), img);
   } else if (it.yt) {
+    setAspect(el, /shorts\//.test(it.link) ? 9 / 16 : 16 / 9);
+    el.append(backdrop(`https://i.ytimg.com/vi/${it.yt}/hqdefault.jpg`));
     el.dataset.yt = it.yt;
     const box = document.createElement('div');
     box.className = 'player';
@@ -173,7 +232,8 @@ function slide(it, pos) {
   rail.className = 'rail';
   if (it.diff != null) {
     rail.insertAdjacentHTML('beforeend',
-      `<div class="act" title="Сложность повторения из 10"><span class="diff">${it.diff}</span>из 10</div>`);
+      `<div class="act" title="Насколько сложно повторить дома: 0 проще всего, 10 сложнее всего">`
+      + `<span class="diff">${it.diff}<small>/10</small></span>сложность</div>`);
   }
   if (it.link) {
     rail.insertAdjacentHTML('beforeend',
@@ -219,9 +279,13 @@ function startPlayer(el, playNow) {
   }
   const host = document.createElement('div');
   box.append(host);
+  sizePlayer(el);
   el._wantPlay = !!playNow;
+  const tall = +el.dataset.ar < 1;
   el._player = new YT.Player(host, {
     videoId: id,
+    width: tall ? YT_H : YT_W,
+    height: tall ? YT_W : YT_H,
     playerVars: {
       autoplay: playNow ? 1 : 0, controls: 0, loop: 1, playlist: id,
       mute: state.sound ? 0 : 1, modestbranding: 1, rel: 0,
@@ -235,8 +299,8 @@ function startPlayer(el, playNow) {
       onStateChange: e => {
         if (e.data !== YT.PlayerState.PLAYING) return;
         clearTimeout(el._t);
-        // плеер первую секунду показывает название и кнопки — держим кадр, пока они не уйдут
-        el._t = setTimeout(() => el.classList.add('playing'), 1100);
+        // chrome is already trimmed off; the short delay only skips the first black frame
+        el._t = setTimeout(() => el.classList.add('playing'), 200);
       },
       onError: () => el.classList.remove('playing'),
     },

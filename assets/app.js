@@ -219,7 +219,7 @@ function tile(it, k) {
   meta.className = 'meta';
   meta.innerHTML = (it.fav ? `<span class="fav" title="Избранное">${icon('star-fill')}</span>` : '')
     + `<span class="sec">${esc(it.section)}</span>`
-    + (it.diff != null ? `<span class="diff" title="Сложность повторения из 10"><b>${it.diff}</b>/10</span>` : '');
+    + (it.diff != null ? `<span class="diff" title="Насколько сложно повторить дома: 0 проще всего, 10 сложнее всего">сложность <b>${it.diff}</b>/10</span>` : '');
   el.append(meta);
 
   const h = document.createElement('h2');
@@ -246,8 +246,7 @@ function thumb(it) {
     b.type = 'button';
     b.className = 'thumb';
     b.setAttribute('aria-label', 'Смотреть ролик: ' + it.title);
-    b.innerHTML = (still ? `<img src="${esc(still)}" alt="" loading="lazy" decoding="async">` : '')
-      + `<span class="play">${icon('play')}</span>`;
+    b.innerHTML = still ? `<img src="${esc(still)}" alt="" loading="lazy" decoding="async">` : '';
     b.addEventListener('click', () => {
       const v = document.createElement('video');
       v.src = it.video;
@@ -275,7 +274,6 @@ function thumb(it) {
     img.decoding = 'async';
     ytStill(img, it.yt);
     a.append(img);
-    a.insertAdjacentHTML('beforeend', `<span class="play">${icon('out')}</span>`);
     return a;
   }
   const d = document.createElement('div');
