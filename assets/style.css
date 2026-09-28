@@ -336,6 +336,22 @@ h1 {
 }
 .tile.open .desc { -webkit-line-clamp: unset; }
 
+.also {
+  margin: 0;
+  color: var(--overlay0);
+  font-size: 13px;
+}
+.also a {
+  display: inline-block;
+  min-width: 22px;
+  margin-left: 2px;
+  color: var(--accent);
+  font-family: "IBM Plex Mono", monospace;
+  text-align: center;
+  text-decoration: none;
+}
+.also a:hover { text-decoration: underline; }
+
 mark {
   background: rgba(250, 179, 135, .2);
   color: var(--text);

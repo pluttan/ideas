@@ -14,6 +14,23 @@ import sys
 MAX_TITLE = 90
 
 
+def media(n, it: dict, root: pathlib.Path) -> list[str]:
+    problems = []
+    link = it.get("link") or ""
+    if link and not re.match(r"^https?://", link):
+        problems.append(f"#{n}: link не похоже на ссылку — {link[:40]}")
+    # видео лежит либо в репозитории рядом с сайтом, либо на стороннем хосте
+    video = it.get("video") or ""
+    if video and not re.match(r"^(https?://\S+\.(mp4|webm)|assets/video/[\w.\-]+\.(mp4|webm))$", video):
+        problems.append(f"#{n}: video не похоже на путь к ролику — {video[:40]}")
+    if video and video.startswith("assets/") and not (root / video).exists():
+        problems.append(f"#{n}: файла нет — {video}")
+    image = it.get("image") or ""
+    if image and not re.match(r"^(https?://\S+\.(jpg|jpeg|png|webp)|assets/img/[\w.\-]+)$", image):
+        problems.append(f"#{n}: image не похоже на путь к картинке — {image[:40]}")
+    return problems
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         sys.exit("укажи путь к ideas.json")
@@ -38,23 +55,16 @@ def main() -> None:
         diff = it.get("diff")
         if diff is not None and not (isinstance(diff, int) and 0 <= diff <= 10):
             problems.append(f"#{n}: сложность вне шкалы — {diff!r}")
-        link = it.get("link") or ""
-        if link and not re.match(r"^https?://", link):
-            problems.append(f"#{n}: link не похоже на ссылку — {link[:40]}")
-        # видео лежит либо в репозитории рядом с сайтом, либо на стороннем хосте
-        video = it.get("video") or ""
-        if video and not re.match(r"^(https?://\S+\.(mp4|webm)|assets/video/[\w.\-]+\.(mp4|webm))$", video):
-            problems.append(f"#{n}: video не похоже на путь к ролику — {video[:40]}")
-        if video and video.startswith("assets/") and not (root / video).exists():
-            problems.append(f"#{n}: файла нет — {video}")
+        problems += media(n, it, root)
+        # слитые в карточку примеры той же идеи проверяются так же, и пустых быть не должно
+        for k, a in enumerate(it.get("also") or [], 1):
+            if not (a.get("video") or a.get("image") or a.get("link")):
+                problems.append(f"#{n}: пример {k} пустой")
+            problems += media(f"{n}.{k}", a, root)
 
         date = it.get("date") or ""
         if date and not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
             problems.append(f"#{n}: дата не в формате ГГГГ-ММ-ДД — {date}")
-
-        image = it.get("image") or ""
-        if image and not re.match(r"^(https?://\S+\.(jpg|jpeg|png|webp)|assets/img/[\w.\-]+)$", image):
-            problems.append(f"#{n}: image не похоже на путь к картинке — {image[:40]}")
 
     described = sum(1 for it in ideas if it.get("desc"))
     rated = sum(1 for it in ideas if it.get("diff") is not None)

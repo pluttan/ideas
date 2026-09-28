@@ -4,7 +4,8 @@
     python3.12 tools/build.py
 
 catalog.jsonl — источник каталога, по одной идее на строку:
-поля title, desc, diff, section, tags, link, video, image, fav, date. Его можно править руками.
+поля title, desc, diff, section, tags, link, video, image, fav, date, also. Его можно править руками.
+also — список других примеров той же идеи ({video, image, link}), слитых в эту карточку.
 """
 import argparse
 import json
@@ -12,7 +13,7 @@ import pathlib
 import re
 import sys
 
-FIELDS = ("title", "desc", "diff", "section", "tags", "link", "video", "image", "fav", "date")
+FIELDS = ("title", "desc", "diff", "section", "tags", "link", "video", "image", "fav", "date", "also")
 
 # порядок разделов на сайте: от самых массовых тем к нишевым задаётся вручную,
 # чтобы каталог открывался на понятном, а не на случайном разделе
@@ -75,6 +76,18 @@ def youtube_id(link: str) -> str:
     return m.group(1) if m else ""
 
 
+def media(it: dict) -> dict:
+    video = (it.get("video") or "").strip()
+    link = (it.get("link") or "").strip()
+    return {
+        "video": video,
+        "poster": poster_for(video),
+        "image": (it.get("image") or "").strip(),
+        "link": link,
+        "yt": youtube_id(link),
+    }
+
+
 def clean(raw: list[dict]) -> list[dict]:
     out = []
     for it in raw:
@@ -96,6 +109,8 @@ def clean(raw: list[dict]) -> list[dict]:
             "yt": youtube_id(link),
             "fav": bool(it.get("fav")),                   # saved to the vault by hand
             "date": (it.get("date") or "").strip()[:10],  # YYYY-MM-DD, drives "newest first"
+            # other takes on the same idea, folded into this card: same fields as the card's own media
+            "also": [media(a) for a in (it.get("also") or [])],
         })
     return out
 

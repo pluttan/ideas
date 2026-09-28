@@ -235,6 +235,14 @@ function tile(it, k) {
     p.addEventListener('click', () => el.classList.toggle('open'));
     el.append(p);
   }
+  if (it.also && it.also.length) {
+    // other takes on the same idea that were folded into this card
+    const more = document.createElement('p');
+    more.className = 'also';
+    more.innerHTML = 'Ещё примеры: ' + it.also.map((a, k) =>
+      `<a href="${esc(a.link || a.video || a.image)}" target="_blank" rel="noopener">${k + 2}</a>`).join(' ');
+    el.append(more);
+  }
   return el;
 }
 

@@ -27,6 +27,7 @@ ICONS = {
     "caret": ("regular", "caret-down"),
     "filters": ("regular", "sliders-horizontal"),
     "image": ("regular", "image"),
+    "cards": ("regular", "cards"),
 }
 
 

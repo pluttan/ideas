@@ -251,6 +251,17 @@ function slide(it, pos) {
       `<div class="act" title="Насколько сложно повторить дома: 0 проще всего, 10 сложнее всего">`
       + `<span class="diff">${it.diff}<small>/10</small></span>сложность</div>`);
   }
+  if (it.also && it.also.length) {
+    // the same idea done by others: the button swaps this slide's media for the next take
+    const n = it.also.length + 1, k = it.k || 0;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'act';
+    b.title = 'Эту идею делали несколько раз: показать другой пример';
+    b.innerHTML = `<span class="round">${icon('cards')}</span>пример ${k + 1}/${n}`;
+    b.addEventListener('click', () => nextTake(el, it));
+    rail.append(b);
+  }
   if (it.link) {
     rail.insertAdjacentHTML('beforeend',
       `<a class="act" href="${esc(it.link)}" target="_blank" rel="noopener">`
@@ -258,6 +269,19 @@ function slide(it, pos) {
   }
   el.append(rail);
   return el;
+}
+
+function nextTake(el, it) {
+  const base = it.base || it;
+  const k = ((it.k || 0) + 1) % (base.also.length + 1);
+  const take = k ? { ...base, ...base.also[k - 1], base, k } : base;
+  const v = el.querySelector('video');
+  if (v) v.pause();
+  stopPlayer(el);
+  const fresh = slide(take, +el.dataset.pos);
+  el.replaceWith(fresh);
+  fit(fresh);
+  if (+fresh.dataset.pos === state.current) activate(fresh);
 }
 
 function still(src) {
